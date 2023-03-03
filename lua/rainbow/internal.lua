@@ -17,16 +17,15 @@
 
 local M = {}
 
-local queries = require('nvim-treesitter.query')
 local parsers = require('nvim-treesitter.parsers')
 local configs = require('nvim-treesitter.configs')
 local highlighter = vim.treesitter.highlighter
-local query_name = 'parens'
 
 local add_predicate = vim.treesitter.query.add_predicate
 local nsid = vim.api.nvim_create_namespace('rainbow_ns')
 local extended_languages = { 'latex', 'html', 'verilog', 'jsx' }
 
+local rainbow_query = require('rainbow.query')
 local colors = configs.get_module('rainbow').colors
 local priority = configs.get_module('rainbow').priority
 
@@ -76,20 +75,6 @@ local function get_items_in_range(items, start, finish)
   return start, finish
 end
 
-local default_query = nil
-local function get_default_query()
-    if not default_query then
-        local contents = {}
-        for _, parent in ipairs({'square', 'curly', 'round'}) do
-            for _, file in ipairs(vim.treesitter.query.get_query_files(parent, query_name)) do
-                table.insert(contents, table.concat(vim.fn.readfile(file), '\n'))
-            end
-        end
-        default_query = table.concat(contents, '\n')
-    end
-    return default_query
-end
-
 --- Update highlights for a range. Called every time text is changed.
 --- @param bufnr number # Buffer number
 --- @param changes table # Range of text changes
@@ -104,10 +89,13 @@ local function update_range(bufnr, changes, tree, lang)
     return
   end
 
-  local root = tree:root()
-
   -- load the query
-  local query = queries.get_query(lang, query_name) or vim.treesitter.query.parse_query(lang, get_default_query())
+  local query = rainbow_query.get_query(lang)
+  if not query then
+    return
+  end
+
+  local root = tree:root()
 
   local items = state_table[bufnr].items[lang] or {}
   -- invalidate everything for now

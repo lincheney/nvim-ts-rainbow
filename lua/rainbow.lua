@@ -5,7 +5,7 @@ function M.init()
     rainbow = {
       module_path = 'rainbow.internal',
       is_supported = function(lang)
-        return require('nvim-treesitter.query').get_query(lang, 'parens') ~= nil
+        return require('rainbow.query').get_query(lang)
       end,
       max_file_lines = nil,
       extended_mode = true,
