@@ -27,6 +27,7 @@ local extended_languages = { 'latex', 'html', 'verilog', 'jsx' }
 
 local rainbow_query = require('rainbow.query')
 local colors = configs.get_module('rainbow').colors
+local unmatched_color = configs.get_module('rainbow').unmatched_color
 local priority = configs.get_module('rainbow').priority
 
 local state_table = {}
@@ -269,7 +270,7 @@ local function on_line(_, win, bufnr, row)
       if true then -- TODO
 
         if not item.hl then
-          item.hl = 'Error'
+          item.hl = unmatched_color
           if item.matched then
             item.hl = colors[(item.level-1) % #colors + 1]
           end

@@ -11,11 +11,12 @@ function M.init()
       extended_mode = true,
       priority = 200,
       colors = {
-        'rainbowcol1',
-        'rainbowcol2',
-        'rainbowcol3',
-        'rainbowcol3',
+        'RainbowCol1',
+        'RainbowCol2',
+        'RainbowCol3',
+        'RainbowCol3',
       },
+      unmatched_color = 'RainbowColUnmatched',
     },
   })
 end
