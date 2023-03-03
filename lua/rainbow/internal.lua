@@ -242,6 +242,16 @@ function M.attach(bufnr, lang)
         vim.list_extend(state_table[bufnr].changes, changes)
       end
     end,
+    on_bytes = function(bufnr, tick, start_row, start_col, offset, old_end_row, old_end_col, old_len, end_row, end_col, len)
+      if state_table[bufnr] then
+        table.insert(state_table[bufnr].changes, {
+          start_row + math.min(0, end_row-old_end_row),
+          start_col + math.min(0, end_col-old_end_col),
+          start_row + math.max(0, end_row-old_end_row),
+          start_col + math.max(0, end_col-old_end_col),
+        })
+      end
+    end,
   })
   full_update(bufnr)
 end
