@@ -12,7 +12,7 @@ local function load_query(name)
     for _, file in ipairs(vim.treesitter.query.get_query_files(name, query_name)) do
       table.insert(contents, table.concat(vim.fn.readfile(file), '\n'))
     end
-    query_strings[name] = table.concat(contens, '\n')
+    query_strings[name] = table.concat(contents, '\n')
   end
   return query_strings[name]
 end
