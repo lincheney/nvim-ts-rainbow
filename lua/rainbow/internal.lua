@@ -21,6 +21,7 @@ local queries = require('nvim-treesitter.query')
 local parsers = require('nvim-treesitter.parsers')
 local configs = require('nvim-treesitter.configs')
 local api = vim.api
+local highlighter = vim.treesitter.highlighter
 
 local add_predicate = vim.treesitter.query.add_predicate
 local nsid = vim.api.nvim_create_namespace('rainbow_ns')
@@ -163,7 +164,7 @@ end
 --- Update highlights for every tree in given buffer.
 --- @param bufnr number # Buffer number
 local function full_update(bufnr)
-  local parser = parsers.get_parser(bufnr)
+  local parser = state_table[bufnr].parser
   parser:invalidate(true)
   parser:parse()
   parser:for_each_tree(function(tree, sub_parser)
@@ -229,11 +230,12 @@ function M.attach(bufnr, lang)
   end
 
   -- register_predicates(config)
-  state_table[bufnr] = {
-    changes={},
-    items={},
-  }
   local parser = parsers.get_parser(bufnr, lang)
+  state_table[bufnr] = {
+    changes = {},
+    items = {},
+    parser = parser,
+  }
   parser:register_cbs({
     on_changedtree = function(changes, tree)
       if state_table[bufnr] then
@@ -266,7 +268,7 @@ local function on_line(_, win, bufnr, row)
     state_table[bufnr].parser:for_each_tree(function(tree, sub_parser)
       update_range(bufnr, state_table[bufnr].changes, tree, sub_parser:lang())
     end)
-    state_table[bufnr].changes = nil
+    state_table[bufnr].changes = {}
   end
 
   local size = #configs.get_module('rainbow').colors
@@ -300,6 +302,13 @@ vim.api.nvim_set_decoration_provider(nsid, {
     return state_table[bufnr] and true
   end,
   on_line = on_line,
+  on_buf = function(_, bufnr)
+    -- if we are using treesitter highlighting, it will do this for us
+    -- otherwise, we have to do it
+    if state_table[bufnr] and not highlighter.active[bufnr] then
+      state_table[bufnr].parser:parse()
+    end
+  end,
 })
 
 return M
