@@ -23,7 +23,6 @@ local highlighter = vim.treesitter.highlighter
 
 local add_predicate = vim.treesitter.query.add_predicate
 local nsid = vim.api.nvim_create_namespace('rainbow_ns')
-local extended_languages = { 'latex', 'html', 'verilog', 'jsx' }
 
 local rainbow_query = require('rainbow.query')
 local colors = configs.get_module('rainbow').colors
@@ -198,35 +197,6 @@ local function full_update(bufnr)
   parser:for_each_tree(function(tree, sub_parser)
     update_range(bufnr, { { tree:root():range() } }, tree, sub_parser:lang())
   end)
-end
-
---- Register predicates for extended mode.
---- @param config table # Configuration for the `rainbow` module in nvim-treesitter
-local function register_predicates(config)
-  local extended_mode
-
-  if type(config.extended_mode) == 'table' then
-    extended_mode = {}
-    for _, lang in pairs(config.extended_mode) do
-      extended_mode[lang] = true
-    end
-  elseif type(config.extended_mode) == 'boolean' then
-    extended_mode = config.extended_mode
-  else
-    vim.api.nvim_err_writeln('nvim-ts-rainbow: `extended_mode` can be a boolean or a table')
-  end
-
-  for _, lang in ipairs(extended_languages) do
-    local enable_extended_mode
-    if type(extended_mode) == 'table' then
-      enable_extended_mode = extended_mode[lang]
-    else
-      enable_extended_mode = extended_mode
-    end
-    add_predicate(lang .. '-extended-rainbow-mode?', function()
-      return enable_extended_mode
-    end, true)
-  end
 end
 
 --- Attach module to buffer. Called when new buffer is opened or `:TSBufEnable rainbow`.

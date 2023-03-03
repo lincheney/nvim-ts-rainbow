@@ -7,7 +7,6 @@
 
 (
    jsx_closing_element
-   ; Combining "/" with "<" results in no JSX highlights
    "<" @middle.jsx_element
    "/" @middle.jsx_element
    name: _ @middle.jsx_element

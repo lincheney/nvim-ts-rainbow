@@ -8,7 +8,6 @@ function M.init()
         return require('rainbow.query').get_query(lang)
       end,
       max_file_lines = nil,
-      extended_mode = true,
       priority = 200,
       colors = {
         'RainbowCol1',
