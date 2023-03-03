@@ -1,7 +1,7 @@
 ; inherits: square,round,curly,comma
 
 (for_statement "for" @middle.for "in" @middle.for ":" @middle.for
-   (else_clause "else" @middle.for ":" @middle.for)?
+    (else_clause "else" @middle.for ":" @middle.for)?
 ) @scope.for
 
 (while_statement "while" @middle.while ":" @middle.while
@@ -9,9 +9,9 @@
 ) @scope.while
 
 (if_statement "if" @middle.if ":" @middle.if
-    (elif_clause "elif" @middle.if ":" @middle.if)?
     (else_clause "else" @middle.if ":" @middle.if)?
 ) @scope.if
+(elif_clause "elif" @middle.if ":" @middle.if)
 
 (with_statement "with" @middle.with ":" @middle.with) @scope.with
 
