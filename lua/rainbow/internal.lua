@@ -220,6 +220,7 @@ function M.attach(bufnr, lang)
     items = {},
     parser = parser,
   }
+
   parser:register_cbs({
     on_changedtree = function(changes, tree)
       if state_table[bufnr] then
@@ -244,13 +245,6 @@ end
 --- @param bufnr number # Buffer number
 function M.detach(bufnr)
   state_table[bufnr] = nil
-  ---@diagnostic disable-next-line
-  if vim.treesitter.highlighter.hl_map then
-    ---@diagnostic disable-next-line
-    vim.treesitter.highlighter.hl_map['punctuation.bracket'] = 'TSPunctBracket' -- luacheck: ignore
-  else
-    vim.api.nvim_set_hl(0, '@punctuation.bracket', { link = 'TSPunctBracket' })
-  end
 end
 
 local function on_line(_, win, bufnr, row)
