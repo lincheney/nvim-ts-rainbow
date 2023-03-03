@@ -140,6 +140,10 @@ local function update_range(bufnr, changes, tree, lang)
         end
         table.insert(items, item)
 
+      elseif name == 'middle' then
+          item.middle = true
+          table.insert(items, item)
+
       end
 
     end
@@ -156,6 +160,8 @@ local function update_range(bufnr, changes, tree, lang)
         item.level = level
         level = level - 1
       end
+    elseif item.middle then
+      item.level = level
     end
   end
   state_table[bufnr].items[lang] = items
@@ -267,11 +273,11 @@ local function on_line(_, win, bufnr, row)
     local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
     for i = start, finish-1 do
       local item = items[i]
-      if true then -- TODO
+      if not item.middle or item.level then
 
         if not item.hl then
           item.hl = unmatched_color
-          if item.matched then
+          if item.matched or item.middle then
             item.hl = colors[(item.level-1) % #colors + 1]
           end
         end
