@@ -14,7 +14,7 @@ function M.init()
         'RainbowCol1',
         'RainbowCol2',
         'RainbowCol3',
-        'RainbowCol3',
+        'RainbowCol4',
       },
       unmatched_color = 'RainbowColUnmatched',
     },
