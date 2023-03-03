@@ -5,7 +5,7 @@ function M.init()
     rainbow = {
       module_path = 'rainbow.internal',
       is_supported = function(lang)
-        return require('rainbow.query').get_query(lang)
+        return require('rainbow.query').get_query(lang) and true
       end,
       max_file_lines = nil,
       highlight_middle = true,
