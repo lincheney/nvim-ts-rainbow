@@ -20,14 +20,14 @@ local M = {}
 local queries = require('nvim-treesitter.query')
 local parsers = require('nvim-treesitter.parsers')
 local configs = require('nvim-treesitter.configs')
-local api = vim.api
 local highlighter = vim.treesitter.highlighter
 
 local add_predicate = vim.treesitter.query.add_predicate
 local nsid = vim.api.nvim_create_namespace('rainbow_ns')
 local extended_languages = { 'latex', 'html', 'verilog', 'jsx' }
+
 local colors = configs.get_module('rainbow').colors
-local termcolors = configs.get_module('rainbow').termcolors
+local priority = configs.get_module('rainbow').priority
 
 local state_table = {}
 
@@ -75,11 +75,6 @@ local function get_items_in_range(items, start, finish)
   return start, finish
 end
 
---- Update highlights for a range. Called every time text is changed.
---- @param bufnr number # Buffer number
---- @param changes table # Range of text changes
---- @param tree table # Syntax tree
---- @param lang string # Language
 --- Update highlights for a range. Called every time text is changed.
 --- @param bufnr number # Buffer number
 --- @param changes table # Range of text changes
@@ -252,11 +247,9 @@ local function on_line(_, win, bufnr, row)
     return
   end
 
-  local colors = configs.get_module('rainbow').colors
   if #colors == 0 then
     return
   end
-  local priority = configs.get_module('rainbow').priority
 
   if #state_table[bufnr].changes > 0 then
     state_table[bufnr].parser:for_each_tree(function(tree, sub_parser)
