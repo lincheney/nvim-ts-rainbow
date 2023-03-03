@@ -201,22 +201,6 @@ local function register_predicates(config)
   end
 end
 
---- Define highlight groups. This had to be a function to allow an autocmd doing this at colorscheme change.
-function M.defhl()
-  for i = 1, math.max(#colors, #termcolors) do
-    local s = string.format('highlight default rainbowcol%d', i)
-    if #colors > 0 then
-      s = s .. ' guifg=' .. colors[(i % #colors == 0) and #colors or (i % #colors)]
-    end
-    if #termcolors > 0 then
-      s = s .. ' ctermfg=' .. termcolors[(i % #termcolors == 0) and #termcolors or (i % #termcolors)]
-    end
-    vim.cmd(s)
-  end
-end
-
-M.defhl()
-
 --- Attach module to buffer. Called when new buffer is opened or `:TSBufEnable rainbow`.
 --- @param bufnr number # Buffer number
 --- @param lang string # Buffer language
@@ -274,6 +258,11 @@ local function on_line(_, win, bufnr, row)
     return
   end
 
+  local colors = configs.get_module('rainbow').colors
+  if #colors == 0 then
+    return
+  end
+
   if #state_table[bufnr].changes > 0 then
     state_table[bufnr].parser:for_each_tree(function(tree, sub_parser)
       update_range(bufnr, state_table[bufnr].changes, tree, sub_parser:lang())
@@ -281,7 +270,6 @@ local function on_line(_, win, bufnr, row)
     state_table[bufnr].changes = {}
   end
 
-  local size = #configs.get_module('rainbow').colors
   for lang, items in pairs(state_table[bufnr].items) do
     local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
     for i = start, finish-1 do
@@ -291,7 +279,7 @@ local function on_line(_, win, bufnr, row)
         if not item.hl then
           item.hl = 'Error'
           if item.matched then
-            item.hl = 'rainbowcol'..tostring((item.level-1) % size + 1)
+            item.hl = colors[(item.level-1) % #colors + 1]
           end
         end
 
