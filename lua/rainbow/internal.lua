@@ -114,10 +114,10 @@ local function update_range(bufnr, changes, tree, lang)
       -- this can happen if a node is captured multiple times
     else
       seen[node:id()] = true
-      local name = query.captures[id]:match('^[^.]*')
+      local name = query.captures[id]:match('^([^-]*)%.')
       local type = query.captures[id]:sub(#name+2)
 
-      local item = {type=type, matched=false, start={node:start()}, finish={node:end_()}}
+      local item = {type = type, matched = false, start = {node:start()}, finish = {node:end_()}}
 
       if name == 'left' then
         -- add to stack
