@@ -98,10 +98,9 @@ local function update_range(bufnr, changes, tree, lang)
 
   local root = tree:root()
 
-  local items = state_table[bufnr].items[lang] or {}
   -- invalidate everything for now
   -- figure out how to do damage later
-  items = {}
+  local items = {}
 
   local seen = {}
   local stack = {}
@@ -186,7 +185,26 @@ local function update_range(bufnr, changes, tree, lang)
       item.level = level
     end
   end
-  state_table[bufnr].items[lang] = items
+  return items
+end
+
+local function update_all_trees(bufnr, changes)
+  local items = {}
+  local num_trees = 0
+  state_table[bufnr].parser:for_each_tree(function(tree, sub_parser)
+    num_trees = num_trees + 1
+    local new_items = update_range(bufnr, changes or {{tree:root():range()}}, tree, sub_parser:lang())
+    if new_items then
+      vim.list_extend(items, new_items)
+    end
+  end)
+  state_table[bufnr].changes = {}
+
+  -- don't need to sort if only 1 tree
+  if num_trees > 1 then
+    table.sort(items, function(x, y) return tuple_cmp(x.start, y.start) < 0 end)
+  end
+  state_table[bufnr].items = items
 end
 
 --- Update highlights for every tree in given buffer.
@@ -195,9 +213,7 @@ local function full_update(bufnr)
   local parser = state_table[bufnr].parser
   parser:invalidate(true)
   parser:parse()
-  parser:for_each_tree(function(tree, sub_parser)
-    update_range(bufnr, { { tree:root():range() } }, tree, sub_parser:lang())
-  end)
+  update_all_trees(bufnr, nil)
 end
 
 --- Attach module to buffer. Called when new buffer is opened or `:TSBufEnable rainbow`.
@@ -256,33 +272,29 @@ local function on_line(_, win, bufnr, row)
   end
 
   if #state_table[bufnr].changes > 0 then
-    state_table[bufnr].parser:for_each_tree(function(tree, sub_parser)
-      update_range(bufnr, state_table[bufnr].changes, tree, sub_parser:lang())
-    end)
-    state_table[bufnr].changes = {}
+    update_all_trees(bufnr, state_table[bufnr].changes)
   end
 
-  for lang, items in pairs(state_table[bufnr].items) do
-    local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
-    for i = start, finish-1 do
-      local item = items[i]
-      if not item.middle or (item.level and highlight_middle) then
+  local items = state_table[bufnr].items
+  local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
+  for i = start, finish-1 do
+    local item = items[i]
+    if not item.middle or (item.level and highlight_middle) then
 
-        if not item.hl then
-          item.hl = unmatched_color
-          if item.matched or item.middle then
-            item.hl = colors[(item.level-1) % #colors + 1]
-          end
+      if not item.hl then
+        item.hl = unmatched_color
+        if item.matched or item.middle then
+          item.hl = colors[(item.level-1) % #colors + 1]
         end
-
-        vim.api.nvim_buf_set_extmark(bufnr, nsid, item.start[1], item.start[2], {
-          end_line = item.finish[1],
-          end_col = item.finish[2],
-          hl_group = item.hl,
-          ephemeral = true,
-          priority = priority,
-        })
       end
+
+      vim.api.nvim_buf_set_extmark(bufnr, nsid, item.start[1], item.start[2], {
+        end_line = item.finish[1],
+        end_col = item.finish[2],
+        hl_group = item.hl,
+        ephemeral = true,
+        priority = priority,
+      })
     end
   end
 end
