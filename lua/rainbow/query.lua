@@ -32,7 +32,10 @@ end
 function M.get_query(lang)
   if not queries[lang] then
     queries[lang] = treesitter_query.get_query(lang, query_name)
-    queries[lang] = queries[lang] or pcall(vim.treesitter.query.parse_query, lang, get_default_query())
+    if not queries[lang] then
+      local ok
+      ok, queries[lang] = pcall(vim.treesitter.query.parse_query, lang, get_default_query())
+    end
 
     if not queries[lang] then
       -- check one by one if square, curly, round work
@@ -43,7 +46,7 @@ function M.get_query(lang)
         end
       end
 
-      if #working > 0 then
+      if #working == 0 then
         return
       end
 
