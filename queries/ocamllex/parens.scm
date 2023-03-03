@@ -1,2 +1,2 @@
-(character_set ["[" @left "]" @right])
-(parenthesized_regexp ["(" @left ")" @right])
+(character_set ["[" @left.square "]" @right.square])
+(parenthesized_regexp ["(" @left.round ")" @right.round])

@@ -1,7 +1,7 @@
 ; inherits: c
 
 (template_argument_list
-  "<" @left ">" @right)
+  "<" @left.angle ">" @right.angle)
 
 (template_parameter_list
-  "<" @left ">" @right)
+  "<" @left.angle ">" @right.angle)

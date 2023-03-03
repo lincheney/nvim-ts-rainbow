@@ -1,7 +1,6 @@
 ; inherits: square,round,curly
-["(?"
- "(?:"
- "(?<"
- ">"] @paren
+"(?" @left.round
+"(?:" @left.round
+"(?<" @left.round
 
 ; TODO:

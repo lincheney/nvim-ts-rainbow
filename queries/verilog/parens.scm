@@ -1,9 +1,9 @@
-["[" "]" "(" ")"] @paren
+; inherits: square,round
 
 ["begin"
  (#verilog-extended-rainbow-mode?)
- ] @left
+ ] @left.begin_end
 
 ["end"
  (#verilog-extended-rainbow-mode?)
- ] @right
+ ] @right.begin_end

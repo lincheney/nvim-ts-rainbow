@@ -1,4 +1,4 @@
 ; inherits: ecma
 (type_arguments
-  "<" @paren
-  ">" @paren)
+  "<" @left.angle
+  ">" @right.angle)

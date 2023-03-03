@@ -113,8 +113,8 @@ local function update_range(bufnr, changes, tree, lang)
       -- this can happen if a node is captured multiple times
     else
       seen[node:id()] = true
-      local name = query.captures[id]
-      local type = 'parens'
+      local name = query.captures[id]:match('^[^.]*')
+      local type = query.captures[id]:sub(#name+2)
 
       local item = {type=type, matched=false, start={node:start()}, finish={node:end_()}}
 
@@ -274,11 +274,11 @@ local function on_line(_, win, bufnr, row)
     local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
     for i = start, finish-1 do
       local item = items[i]
-      if item.level then
+      if true then -- TODO
 
         if not item.hl then
           item.hl = 'Error'
-          if item.matched or item.middle then
+          if item.matched then
             item.hl = 'rainbowcol'..tostring((item.level-1) % size + 1)
           end
         end

@@ -1,11 +1,11 @@
 ; inherits round, curly
-(function_call ")" @right)
-(function_call "(" @left)
+(function_call ")" @right.round)
+(function_call "(" @left.round)
 
 
-(substitution_reference ")" @right)
-(substitution_reference "(" @left)
+(substitution_reference ")" @right.round)
+(substitution_reference "(" @left.round)
 
 
-(variable_reference ")" @right)
-(variable_reference "(" @left)
+(variable_reference ")" @right.round)
+(variable_reference "(" @left.round)

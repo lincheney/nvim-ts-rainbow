@@ -1,2 +1,2 @@
-"<" @left
-">" @right
+"<" @left.angle
+">" @right.angle

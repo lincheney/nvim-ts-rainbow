@@ -1,8 +1,7 @@
+; inherits: angle
 
-  "<" @left
-  ">" @right
-  "</" @left
-  "/>" @right
+  "</" @left.angle
+  "/>" @right.angle
 
 
    [(tag_name)

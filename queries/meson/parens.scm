@@ -1,8 +1,1 @@
-[
-  "("
-  "["
-] @left
-[
-  ")"
-  "]"
-] @right
+; inherits round, square

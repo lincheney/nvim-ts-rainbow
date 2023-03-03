@@ -1,4 +1,4 @@
 ; inherits: cpp
 
 (kernel_call_syntax
-  "<<<" @left ">>>" @right)
+  "<<<" @left.angle.triple ">>>" @right.angle.triple)

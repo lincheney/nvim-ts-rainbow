@@ -1,14 +1,13 @@
 ; inherits: square,round,curly
 (bitstring
-  "<<" @left
-  ">>" @right)
+  "<<" @left.angle.double
+  ">>" @right.angle.double)
 (map
-  "%" @left
-  "{" @left
-  "}" @right)
+  "{" @left.curly
+  "}" @right.curly)
 (interpolation
-  "#{" @left
-  "}" @right)
+  "#{" @left.curly
+  "}" @right.curly)
 (sigil
-  (sigil_name) @left
-  (sigil_modifiers) @right)
+  (sigil_name) @left.sigil
+  (sigil_modifiers) @right.sigil)

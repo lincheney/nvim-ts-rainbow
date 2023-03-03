@@ -1,8 +1,8 @@
 ((jsx_opening_element
    "<" @left-tag-start
-   name: _ @left
+   name: _ @left.jsx.element
    ">" @left-tag-end
- ) (#jsx-extended-rainbow-mode? @left-tag-start @left-tag-end @left))
+ ) (#jsx-extended-rainbow-mode? @left-tag-start @left-tag-end @left.jsx.element))
 
 ((jsx_self_closing_element
    "<"+ @self-closing-tag-start
@@ -14,6 +14,6 @@
 ((jsx_closing_element
    ; Combining "/" with "<" results in no JSX highlights
    ["<" "/"]+ @right-tag-start
-   name: _ @right
+   name: _ @right.jsx.element
    ">" @right-tag-end
- ) (#jsx-extended-rainbow-mode? @right-tag-start @right-tag-end @right))
+ ) (#jsx-extended-rainbow-mode? @right-tag-start @right-tag-end @right.jsx.element))

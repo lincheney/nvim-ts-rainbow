@@ -1,5 +1,5 @@
 ; inherits: square,round,curly
 
 (template_substitution
-  "${" @left
-  "}" @right)
+  "${" @left.curly
+  "}" @right.curly)

@@ -1,10 +1,10 @@
 ; inherits: round,curly,square
 (_
-  "[[" @left
-  "]]" @right)
+  "[[" @left.square.double
+  "]]" @right.square.double)
 (command_substitution
-  "$(" @left
-  ")" @right)
+  "$(" @left.round
+  ")" @right.round)
 (expansion
-  "${" @left
-  "}" @right)
+  "${" @left.curly
+  "}" @right.curly)

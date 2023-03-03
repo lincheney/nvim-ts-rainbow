@@ -1,5 +1,5 @@
 ; inherits: square,round,curly
-(_ "[|" @left
-   "|]" @right)
+(_ "[|" @left.square.bar
+   "|]" @right.square.bar)
 ;(_ "[<" @left ; TODO:
 ;   ">]" @right)

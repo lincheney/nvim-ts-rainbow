@@ -1,4 +1,1 @@
-[
-  "{"
-  "}"
-] @paren
+; inherits: curly

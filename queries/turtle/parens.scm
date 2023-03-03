@@ -1,7 +1,2 @@
-[
-  "("
-  ")"
-  "["
-  "]"
-  (anon)
-] @paren
+; inherits: square,round
+(anon) @paren

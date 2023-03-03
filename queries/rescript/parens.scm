@@ -1,9 +1,9 @@
 ; inherits: square,round,curly
 
 (type_parameters
- "<" @paren
- ">" @paren)
+ "<" @left.angle
+ ">" @right.angle)
 
 (type_arguments
- "<" @paren
- ">" @paren)
+ "<" @left.angle
+ ">" @right.angle)
