@@ -119,6 +119,14 @@ local function update_range(bufnr, changes, tree, lang)
 
       local item = {type = type, matched = false, start = {node:start()}, finish = {node:end_()}}
 
+      while #scopes > 0 and tuple_cmp(item.start, scopes[#scopes].finish) >= 0 do
+        -- this scope has finished
+        local scope = table.remove(scopes)
+        local scope_end = {type = scope.type, scope = true, open = false, matched = true, start = scope.finish, finish = scope.finish}
+        scope.finish = scope.start -- scope start finishes at the start
+        table.insert(items, scope_end)
+      end
+
       if name == 'left' then
         -- add to stack
         item.open = true
@@ -144,9 +152,23 @@ local function update_range(bufnr, changes, tree, lang)
           item.middle = true
           table.insert(items, item)
 
+      elseif name == 'scope' then
+        item.scope = true
+        item.matched = true
+        item.open = true
+        table.insert(scopes, item)
+        table.insert(items, item)
+
       end
 
     end
+  end
+
+  for _, scope in ipairs(scopes) do
+    -- this scope has finished
+    local scope_end = {type = scope.type, scope = true, open = false, matched = true, start = scope.finish, finish = scope.finish}
+    scope.finish = scope.start -- scope start finishes at the start
+    table.insert(items, scope_end)
   end
 
   -- set the level of each bracket, starting from 0
