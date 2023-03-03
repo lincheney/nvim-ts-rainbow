@@ -114,7 +114,7 @@ local function update_range(bufnr, changes, tree, lang, exclusions)
       -- this can happen if a node is captured multiple times
     elseif (function()
         for _, range in ipairs(exclusions) do
-          if 0 < tuple_cmp(range, {node:end_()}) and tuple_cmp({node:start()}, {range[3], range[4]}) < 0 then
+          if range_overlap(range, {node:range()}) then
             return true
           end
         end
@@ -205,17 +205,18 @@ local function update_all_trees(bufnr, changes)
   -- later trees override earlier trees, so construct the ranges where earlier trees don't apply
   -- we can't just drop/override highlights in those ranges
   -- we need to exclude them from calculation altogether or matching will be off
-  local exclusions = {{}}
+  local exclusions = {}
   state.parser:for_each_tree(function(tree, sub_parser)
+    for _, ex in ipairs(exclusions) do
+      table.insert(ex, {tree:root():range()})
+    end
+    table.insert(exclusions, {})
     num_trees = num_trees + 1
-    local new_ex = vim.deepcopy(exclusions[#exclusions])
-    table.insert(new_ex, {tree:root():range()})
-    table.insert(exclusions, new_ex)
   end)
 
   local i = 1
   state.parser:for_each_tree(function(tree, sub_parser)
-    local new_items = update_range(bufnr, changes or {{tree:root():range()}}, tree, sub_parser:lang(), exclusions[#exclusions-i])
+    local new_items = update_range(bufnr, changes or {{tree:root():range()}}, tree, sub_parser:lang(), exclusions[i])
     if new_items then
       vim.list_extend(state.items, new_items)
     end
