@@ -81,7 +81,8 @@ end
 --- @param changes table # Range of text changes
 --- @param tree table # Syntax tree
 --- @param lang string # Language
-local function update_range(bufnr, changes, tree, lang)
+--- @param list of excluded ranges
+local function update_range(bufnr, changes, tree, lang, exclusions)
   if #changes == 0 then
     return
   end
@@ -111,6 +112,14 @@ local function update_range(bufnr, changes, tree, lang)
     elseif seen[node:id()] then
       -- skip nodes we have already processed
       -- this can happen if a node is captured multiple times
+    elseif (function()
+        for _, range in ipairs(exclusions) do
+          if 0 < tuple_cmp(range, {node:end_()}) and tuple_cmp({node:start()}, {range[3], range[4]}) < 0 then
+            return true
+          end
+        end
+    end)() then
+      -- skip any nodes in the excluded range
     else
       seen[node:id()] = true
       local name = query.captures[id]:match('^([^.]*)%.')
@@ -189,22 +198,35 @@ local function update_range(bufnr, changes, tree, lang)
 end
 
 local function update_all_trees(bufnr, changes)
-  local items = {}
   local num_trees = 0
-  state_table[bufnr].parser:for_each_tree(function(tree, sub_parser)
+  local state = state_table[bufnr]
+  state.items = {}
+
+  -- later trees override earlier trees, so construct the ranges where earlier trees don't apply
+  -- we can't just drop/override highlights in those ranges
+  -- we need to exclude them from calculation altogether or matching will be off
+  local exclusions = {{}}
+  state.parser:for_each_tree(function(tree, sub_parser)
     num_trees = num_trees + 1
-    local new_items = update_range(bufnr, changes or {{tree:root():range()}}, tree, sub_parser:lang())
-    if new_items then
-      vim.list_extend(items, new_items)
-    end
+    local new_ex = vim.deepcopy(exclusions[#exclusions])
+    table.insert(new_ex, {tree:root():range()})
+    table.insert(exclusions, new_ex)
   end)
-  state_table[bufnr].changes = {}
+
+  local i = 1
+  state.parser:for_each_tree(function(tree, sub_parser)
+    local new_items = update_range(bufnr, changes or {{tree:root():range()}}, tree, sub_parser:lang(), exclusions[#exclusions-i])
+    if new_items then
+      vim.list_extend(state.items, new_items)
+    end
+    i = i + 1
+  end)
+  state.changes = {}
 
   -- don't need to sort if only 1 tree
   if num_trees > 1 then
-    table.sort(items, function(x, y) return tuple_cmp(x.start, y.start) < 0 end)
+    table.sort(state.items, function(x, y) return tuple_cmp(x.start, y.start) < 0 end)
   end
-  state_table[bufnr].items = items
 end
 
 --- Update highlights for every tree in given buffer.
