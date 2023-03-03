@@ -28,6 +28,7 @@ local rainbow_query = require('rainbow.query')
 local colors = configs.get_module('rainbow').colors
 local unmatched_color = configs.get_module('rainbow').unmatched_color
 local priority = configs.get_module('rainbow').priority
+local highlight_middle = configs.get_module('rainbow').highlight_middle
 
 local state_table = {}
 
@@ -265,7 +266,7 @@ local function on_line(_, win, bufnr, row)
     local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
     for i = start, finish-1 do
       local item = items[i]
-      if not item.middle or item.level then
+      if not item.middle or (item.level and highlight_middle) then
 
         if not item.hl then
           item.hl = unmatched_color
