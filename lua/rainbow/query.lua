@@ -2,6 +2,7 @@ local M = {}
 
 local treesitter_query = require('nvim-treesitter.query')
 local query_name = 'parens'
+local fallback_queries = {'square', 'curly', 'round', 'comma'}
 
 local queries = {}
 local query_strings = {}
@@ -21,7 +22,7 @@ local default_query = nil
 local function get_default_query()
   if not default_query then
     local contents = {}
-    for _, name in ipairs({'square', 'curly', 'round'}) do
+    for _, name in ipairs(fallback_queries) do
       table.insert(contents, load_query(name))
     end
     default_query = table.concat(contents, '\n')
@@ -41,7 +42,7 @@ function M.get_query(lang)
     if not queries[lang] then
       -- check one by one if square, curly, round work
       local working = {}
-      for _, name in ipairs({'square', 'curly', 'round'}) do
+      for _, name in ipairs(fallback_queries) do
         if pcall(vim.treesitter.query.parse_query, lang, load_query(name)) then
           table.insert(working, load_query(name))
         end

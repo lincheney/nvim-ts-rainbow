@@ -1,4 +1,4 @@
-; inherits: square,round,curly
+; inherits: square,round,curly,comma
 "function" @left.block
 "while" @left.block
 "for" @left.block

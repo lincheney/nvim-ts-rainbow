@@ -1,1 +1,1 @@
-; inherits: square,round,curly,angle
+; inherits: square,round,curly,angle,comma

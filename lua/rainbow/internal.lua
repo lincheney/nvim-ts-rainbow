@@ -182,7 +182,7 @@ local function update_range(bufnr, changes, tree, lang)
         item.level = level
         level = level - 1
       end
-    elseif item.middle then
+    elseif item.middle then -- TODO currently we do not check for the type for middle nodes
       item.level = level
     end
   end

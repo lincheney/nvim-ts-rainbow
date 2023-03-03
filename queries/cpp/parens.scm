@@ -1,4 +1,4 @@
-; inherits: curly,round,square
+; inherits: curly,round,square,comma
 
 (template_argument_list
   "<" @left.angle ">" @right.angle)
