@@ -256,6 +256,7 @@ local function on_line(_, win, bufnr, row)
   if #colors == 0 then
     return
   end
+  local priority = configs.get_module('rainbow').priority
 
   if #state_table[bufnr].changes > 0 then
     state_table[bufnr].parser:for_each_tree(function(tree, sub_parser)
@@ -282,7 +283,7 @@ local function on_line(_, win, bufnr, row)
           end_col = item.finish[2],
           hl_group = item.hl,
           ephemeral = true,
-          priority = 1000,
+          priority = priority,
         })
       end
     end

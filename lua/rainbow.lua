@@ -9,6 +9,7 @@ function M.init()
       end,
       max_file_lines = nil,
       extended_mode = true,
+      priority = 200,
       colors = {
         'rainbowcol1',
         'rainbowcol2',
