@@ -116,9 +116,7 @@ local function update_range(bufnr, tree, lang, exclusions)
       -- skip any nodes in the excluded range
     else
       seen[node:id()] = true
-      local name = query.captures[id]:match('^([^.]*)%.')
-      local type = name and query.captures[id]:sub(#name+2)
-
+      local name, type = query.captures[id]:match('^([^.]*)%.(.*)$')
       local item = {type = type, matched = false, start = {node:start()}, finish = {node:end_()}}
 
       while #scopes > 0 and tuple_cmp(item.start, scopes[#scopes].finish) >= 0 do
@@ -138,13 +136,15 @@ local function update_range(bufnr, tree, lang, exclusions)
       elseif name == 'right' then
         -- find a matching opening bracket
         item.open = false
-        local index
         for i = 0, #stack-1 do
           local x = stack[#stack-i]
           if x.type == type then
             x.matched = true
             item.matched = true
-            stack = vim.list_slice(stack, 1, #stack-i-1)
+            -- pop off the stack
+            for j = #stack-i, #stack do
+              stack[j] = nil
+            end
             break
           end
         end
