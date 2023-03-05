@@ -258,15 +258,6 @@ local function update_all_trees(bufnr, force)
   end
 end
 
---- Update highlights for every tree in given buffer.
---- @param bufnr number # Buffer number
-local function full_update(bufnr)
-  local parser = state_table[bufnr].parser
-  parser:invalidate(true)
-  parser:parse()
-  update_all_trees(bufnr, true)
-end
-
 --- Attach module to buffer. Called when new buffer is opened or `:TSBufEnable rainbow`.
 --- @param bufnr number # Buffer number
 --- @param lang string # Buffer language
@@ -310,7 +301,6 @@ function M.attach(bufnr, lang)
       end
     end,
   })
-  full_update(bufnr)
 end
 
 --- Detach module from buffer. Called when `:TSBufDisable rainbow`.
