@@ -5,6 +5,9 @@
 ; "||" @middle.square.double
 "]]" @right.square.double
 
+"((" @left.round.double
+"))" @right.round.double
+
 "$(" @left.round
 "<(" @left.round
 ">(" @left.round
