@@ -207,7 +207,7 @@ local function need_invalidate(bufnr)
     -- we only care about byte changes if they make line changes OR we have brackets on the same row
     for _, change in ipairs(state.byte_changes) do
       local item = state.items[binsearch_items(state.items, change)]
-      if item and (change.line_changes or item.start[1] == change[1]) then
+      if item and (change[1] ~= change[3] or item.start[1] == change[1]) then
         return true
       end
     end
@@ -295,7 +295,6 @@ function M.attach(bufnr, lang)
           start_col + math.min(0, end_col-old_end_col),
           start_row + math.max(0, end_row-old_end_row),
           start_col + math.max(0, end_col-old_end_col),
-          line_changes = old_end_row ~= end_row,
         }
         table.insert(state_table[bufnr].byte_changes, change);
       end
