@@ -78,15 +78,10 @@ end
 
 --- Update highlights for a range. Called every time text is changed.
 --- @param bufnr number # Buffer number
---- @param changes table # Range of text changes
 --- @param tree table # Syntax tree
 --- @param lang string # Language
 --- @param list of excluded ranges
-local function update_range(bufnr, changes, tree, lang, exclusions)
-  if #changes == 0 then
-    return
-  end
-
+local function update_range(bufnr, tree, lang, exclusions)
   if vim.fn.pumvisible() ~= 0 or not lang then
     return
   end
@@ -197,9 +192,43 @@ local function update_range(bufnr, changes, tree, lang, exclusions)
   return items
 end
 
-local function update_all_trees(bufnr, changes)
-  local num_trees = 0
+local function need_invalidate(bufnr)
   local state = state_table[bufnr]
+
+  if not state.items then
+    -- first run
+    return true
+
+  elseif #state.changes > 0 then
+    -- tree changes
+    return true
+
+  elseif #state.byte_changes > 0 and #state.items > 0 then
+    -- we only care about byte changes if they make line changes OR we have brackets on the same row
+    for _, change in ipairs(state.byte_changes) do
+      local item = state.items[binsearch_items(state.items, change)]
+      if item and (change.line_changes or item.start[1] == change[1]) then
+        return true
+      end
+    end
+
+  end
+
+  -- no changes
+  return false
+end
+
+local function update_all_trees(bufnr, force)
+  local invalidate = force or need_invalidate(bufnr)
+
+  local state = state_table[bufnr]
+  state.changes = {}
+  state.byte_changes = {}
+  if not invalidate then
+    return
+  end
+
+  local num_trees = 0
   state.items = {}
 
   -- later trees override earlier trees, so construct the ranges where earlier trees don't apply
@@ -216,13 +245,12 @@ local function update_all_trees(bufnr, changes)
 
   local i = 1
   state.parser:for_each_tree(function(tree, sub_parser)
-    local new_items = update_range(bufnr, changes or {{tree:root():range()}}, tree, sub_parser:lang(), exclusions[i])
+    local new_items = update_range(bufnr, tree, sub_parser:lang(), exclusions[i])
     if new_items then
       vim.list_extend(state.items, new_items)
     end
     i = i + 1
   end)
-  state.changes = {}
 
   -- don't need to sort if only 1 tree
   if num_trees > 1 then
@@ -236,7 +264,7 @@ local function full_update(bufnr)
   local parser = state_table[bufnr].parser
   parser:invalidate(true)
   parser:parse()
-  update_all_trees(bufnr, nil)
+  update_all_trees(bufnr, true)
 end
 
 --- Attach module to buffer. Called when new buffer is opened or `:TSBufEnable rainbow`.
@@ -255,7 +283,8 @@ function M.attach(bufnr, lang)
   local parser = parsers.get_parser(bufnr, lang)
   state_table[bufnr] = {
     changes = {},
-    items = {},
+    byte_changes = {},
+    items = nil,
     parser = parser,
   }
 
@@ -266,13 +295,18 @@ function M.attach(bufnr, lang)
       end
     end,
     on_bytes = function(bufnr, tick, start_row, start_col, offset, old_end_row, old_end_col, old_len, end_row, end_col, len)
+      -- sometimes there's no syntax/tree changes, but there are byte changes
+      -- these can shift the positions of later brackets
+      -- so we reparse in these cases
       if state_table[bufnr] then
-        table.insert(state_table[bufnr].changes, {
+        local change = {
           start_row + math.min(0, end_row-old_end_row),
           start_col + math.min(0, end_col-old_end_col),
           start_row + math.max(0, end_row-old_end_row),
           start_col + math.max(0, end_col-old_end_col),
-        })
+          line_changes = old_end_row ~= end_row,
+        }
+        table.insert(state_table[bufnr].byte_changes, change);
       end
     end,
   })
@@ -294,9 +328,7 @@ local function on_line(_, win, bufnr, row)
     return
   end
 
-  if #state_table[bufnr].changes > 0 then
-    update_all_trees(bufnr, state_table[bufnr].changes)
-  end
+  update_all_trees(bufnr)
 
   local items = state_table[bufnr].items
   local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
