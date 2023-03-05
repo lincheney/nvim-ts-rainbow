@@ -57,7 +57,6 @@ local function binsearch_items(items, target, start)
 
   while start <= finish do
     mid = math.floor((start + finish) / 2)
-    -- we are just comparing start ; is that good enough?
     local cmp = tuple_cmp(target, items[mid].start)
     if cmp < 0 then
       finish = mid - 1
