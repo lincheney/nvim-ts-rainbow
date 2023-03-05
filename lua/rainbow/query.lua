@@ -35,8 +35,10 @@ function M.get_query(lang)
     queries[lang] = treesitter_query.get_query(lang, query_name)
 
     if not queries[lang] then
-      local ok
-      ok, queries[lang] = pcall(vim.treesitter.query.parse_query, lang, get_default_query())
+      local ok, query = pcall(vim.treesitter.query.parse_query, lang, get_default_query())
+      if ok then
+        queries[lang] = query
+      end
     end
 
     if not queries[lang] then
