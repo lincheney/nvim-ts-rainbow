@@ -1,8 +1,8 @@
 ; inherits: curly,square
 
 "[[" @left.square.double
-"&&" @middle.square.double
-"||" @middle.square.double
+; "&&" @middle.square.double
+; "||" @middle.square.double
 "]]" @right.square.double
 
 "$(" @left.round
@@ -11,8 +11,9 @@
 "${" @left.curly
 
 "if" @left.if
-"then" @middle.if
+(if_statement "then" @middle.if)
 "elif" @middle.if
+(elif_clause "then" @middle.if)
 "else" @middle.if
 "fi" @right.if
 
@@ -20,7 +21,7 @@
 "until" @left.block
 "for" @left.block
 (for_statement "in" @middle.block)
-"do" @middle.block
+(do_group "do" @middle.block)
 "done" @right.block
 
 "case" @left.case
