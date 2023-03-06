@@ -21,7 +21,6 @@ local parsers = require('nvim-treesitter.parsers')
 local configs = require('nvim-treesitter.configs')
 local highlighter = vim.treesitter.highlighter
 
-local add_predicate = vim.treesitter.query.add_predicate
 local nsid = vim.api.nvim_create_namespace('rainbow_ns')
 
 local rainbow_query = require('rainbow.query')
@@ -31,6 +30,12 @@ local priority = configs.get_module('rainbow').priority
 local highlight_middle = configs.get_module('rainbow').highlight_middle
 
 local state_table = {}
+
+local LEFT = 1
+local RIGHT = 2
+local MIDDLE = 3
+local SCOPE_LEFT = 4
+local SCOPE_RIGHT = 4
 
 local function tuple_cmp(x, y)
   if     x[1] < y[1] then
@@ -78,9 +83,8 @@ end
 local function finish_scope(scope, pool)
   -- recycle tables from the pool
   local scope_end = table.remove(pool) or {}
-  scope_end.type = scope.type
-  scope_end.scope = true
-  scope_end.open = false
+  scope_end.kind = scope.kind
+  scope_end.type = SCOPE_RIGHT
   scope_end.matched = true
   if not scope_end.start then
     scope_end.start = {}
@@ -136,14 +140,12 @@ local function update_range(bufnr, tree, lang, exclusions, pool)
       -- skip any nodes in the excluded range
     else
       seen[node:id()] = true
-      local name, type = query.captures[id]:match('^([^.]*)%.(.*)$')
+      local name, kind = query.captures[id]:match('^([^.]*)%.(.*)$')
 
       -- recycle tables from the pool
       local item = table.remove(pool) or {}
-      item.type = type
+      item.kind = kind
       item.matched = false
-      item.scope = false
-      item.open = false
       if not item.start then
         item.start = {}
       end
@@ -160,16 +162,16 @@ local function update_range(bufnr, tree, lang, exclusions, pool)
 
       if name == 'left' then
         -- add to stack
-        item.open = true
+        item.type = LEFT
         table.insert(stack, item)
         table.insert(items, item)
 
       elseif name == 'right' then
         -- find a matching opening bracket
-        item.open = false
+        item.type = RIGHT
         for i = 0, #stack-1 do
           local x = stack[#stack-i]
-          if x.type == type then
+          if x.kind == kind then
             x.matched = true
             item.matched = true
             -- pop off the stack
@@ -182,13 +184,12 @@ local function update_range(bufnr, tree, lang, exclusions, pool)
         table.insert(items, item)
 
       elseif name == 'middle' then
-          item.middle = true
+          item.type = MIDDLE
           table.insert(items, item)
 
       elseif name == 'scope' then
-        item.scope = true
+        item.type = SCOPE_LEFT
         item.matched = true
-        item.open = true
         table.insert(scopes, item)
         table.insert(items, item)
 
@@ -204,16 +205,16 @@ local function update_range(bufnr, tree, lang, exclusions, pool)
   -- set the level of each bracket, starting from 0
   local level = 0
   for _, item in ipairs(items) do
-    if item.matched then
-      if item.open then
+    if item.type == MIDDLE then -- TODO currently we do not check for the kind for middle nodes
+      item.level = level
+    elseif item.matched then
+      if item.type == LEFT or item.type == SCOPE_LEFT then
         level = level + 1
         item.level = level
-      else
+      elseif item.type == RIGHT or item.type == SCOPE_RIGHT then
         item.level = level
         level = level - 1
       end
-    elseif item.middle then -- TODO currently we do not check for the type for middle nodes
-      item.level = level
     end
   end
   return items
@@ -351,11 +352,11 @@ local function on_line(_, win, bufnr, row)
   local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
   for i = start, finish-1 do
     local item = items[i]
-    if not item.middle or (item.level and highlight_middle) then
+    if item.type ~= MIDDLE or (item.level and highlight_middle) then
 
       if not item.hl then
         item.hl = unmatched_color
-        if item.matched or item.middle then
+        if item.matched or item.type == MIDDLE then
           item.hl = colors[(item.level-1) % #colors + 1]
         end
       end
