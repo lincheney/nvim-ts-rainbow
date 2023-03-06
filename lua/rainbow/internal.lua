@@ -125,12 +125,13 @@ local function update_range(bufnr, tree, lang, exclusions, pool)
   local stack = {}
   local scopes = {}
 
+
   for id, node, metadata in query:iter_captures(root, bufnr, 0, -1) do
     if node:has_error() then
     elseif seen[node:id()] then
       -- skip nodes we have already processed
       -- this can happen if a node is captured multiple times
-    elseif (function()
+    elseif #exclusions > 0 and (function()
         for _, range in ipairs(exclusions) do
           if range_overlap(range, {node:range()}) then
             return true
