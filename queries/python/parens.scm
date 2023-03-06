@@ -21,7 +21,7 @@
 
 (try_statement "try" @middle.try ":" @middle.try
     (except_clause "except" @middle.try ":" @middle.try)?
-    (except_group_clause "except*" @middle.try ":" @middle.try)?
+    ; (except_group_clause "except*" @middle.try ":" @middle.try)?
     (else_clause "else" @middle.try ":" @middle.try)?
     (finally_clause "finally" @middle.try ":" @middle.try)?
 ) @scope.try
