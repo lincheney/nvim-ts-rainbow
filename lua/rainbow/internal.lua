@@ -75,12 +75,32 @@ local function get_items_in_range(items, start, finish)
   return start, finish
 end
 
+local function finish_scope(scope, pool)
+  -- recycle tables from the pool
+  local scope_end = table.remove(pool) or {}
+  scope_end.type = scope.type
+  scope_end.scope = true
+  scope_end.open = false
+  scope_end.matched = true
+  if not scope_end.start then
+    scope_end.start = {}
+  end
+  if not scope_end.finish then
+    scope_end.finish = {}
+  end
+  scope_end.start[1], scope_end.start[2] = unpack(scope.finish)
+  scope_end.finish[1], scope_end.finish[2] = unpack(scope.finish)
+  -- scope start finishes at the start
+  scope.finish[1], scope.finish[2] = unpack(scope.start)
+  return scope_end
+end
+
 --- Update highlights for a range. Called every time text is changed.
 --- @param bufnr number # Buffer number
 --- @param tree table # Syntax tree
 --- @param lang string # Language
 --- @param list of excluded ranges
-local function update_range(bufnr, tree, lang, exclusions)
+local function update_range(bufnr, tree, lang, exclusions, pool)
   if vim.fn.pumvisible() ~= 0 or not lang then
     return
   end
@@ -117,14 +137,25 @@ local function update_range(bufnr, tree, lang, exclusions)
     else
       seen[node:id()] = true
       local name, type = query.captures[id]:match('^([^.]*)%.(.*)$')
-      local item = {type = type, matched = false, start = {node:start()}, finish = {node:end_()}}
+
+      -- recycle tables from the pool
+      local item = table.remove(pool) or {}
+      item.type = type
+      item.matched = false
+      item.scope = false
+      item.open = false
+      if not item.start then
+        item.start = {}
+      end
+      if not item.finish then
+        item.finish = {}
+      end
+      item.start[1], item.start[2] = node:start()
+      item.finish[1], item.finish[2] = node:end_()
 
       while #scopes > 0 and tuple_cmp(item.start, scopes[#scopes].finish) >= 0 do
         -- this scope has finished
-        local scope = table.remove(scopes)
-        local scope_end = {type = scope.type, scope = true, open = false, matched = true, start = scope.finish, finish = scope.finish}
-        scope.finish = scope.start -- scope start finishes at the start
-        table.insert(items, scope_end)
+        table.insert(items, finish_scope(table.remove(scopes), pool))
       end
 
       if name == 'left' then
@@ -167,10 +198,7 @@ local function update_range(bufnr, tree, lang, exclusions)
   end
 
   for _, scope in ipairs(scopes) do
-    -- this scope has finished
-    local scope_end = {type = scope.type, scope = true, open = false, matched = true, start = scope.finish, finish = scope.finish}
-    scope.finish = scope.start -- scope start finishes at the start
-    table.insert(items, scope_end)
+    table.insert(items, finish_scope(scope, pool))
   end
 
   -- set the level of each bracket, starting from 0
@@ -228,6 +256,7 @@ local function update_all_trees(bufnr, force)
   end
 
   local num_trees = 0
+  local items = state.items or {}
   state.items = {}
 
   -- later trees override earlier trees, so construct the ranges where earlier trees don't apply
@@ -244,7 +273,7 @@ local function update_all_trees(bufnr, force)
 
   local i = 1
   state.parser:for_each_tree(function(tree, sub_parser)
-    local new_items = update_range(bufnr, tree, sub_parser:lang(), exclusions[i])
+    local new_items = update_range(bufnr, tree, sub_parser:lang(), exclusions[i], items)
     if new_items then
       vim.list_extend(state.items, new_items)
     end
