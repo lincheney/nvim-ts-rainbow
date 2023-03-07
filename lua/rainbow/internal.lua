@@ -147,6 +147,8 @@ local function update_range(bufnr, tree, lang, exclusions, pool)
       local item = table.remove(pool) or {}
       item.kind = kind
       item.matched = false
+      item.level = nil
+      item.hl = nil
       if not item.start then
         item.start = {}
       end
