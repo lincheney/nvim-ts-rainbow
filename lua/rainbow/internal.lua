@@ -260,7 +260,7 @@ local function update_all_trees(bufnr, force)
   end
 
   local num_trees = 0
-  local items = state.items or {}
+  local pool = state.items or {}
   state.items = {}
 
   -- later trees override earlier trees, so construct the ranges where earlier trees don't apply
@@ -277,7 +277,7 @@ local function update_all_trees(bufnr, force)
 
   local i = 1
   state.parser:for_each_tree(function(tree, sub_parser)
-    local new_items = update_range(bufnr, tree, sub_parser:lang(), exclusions[i], items)
+    local new_items = update_range(bufnr, tree, sub_parser:lang(), exclusions[i], pool)
     if new_items then
       vim.list_extend(state.items, new_items)
     end
