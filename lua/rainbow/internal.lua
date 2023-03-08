@@ -132,11 +132,19 @@ local function update_range(bufnr, tree, lang, exclusions, pool)
       -- skip nodes we have already processed
       -- this can happen if a node is captured multiple times
     elseif #exclusions > 0 and (function()
-        for _, range in ipairs(exclusions) do
-          if range_overlap(range, {node:range()}) then
-            return true
+        -- check if node overlaps with an exclusion range
+        -- either the start or the end should lie in a exclusion
+        local item, found = binsearch_items(exclusions, {node:start()})
+        if not found then
+          local range = {node:end_()}
+          range[2] = range[2] - 1
+          if range[2] < 1 then
+            range = {range[1]-1, 0}
           end
+          item, found = binsearch_items(exclusions, range)
         end
+
+        return found
     end)() then
       -- skip any nodes in the excluded range
     else
@@ -268,16 +276,22 @@ local function update_all_trees(bufnr, force)
   -- we need to exclude them from calculation altogether or matching will be off
   local exclusions = {}
   state.parser:for_each_tree(function(tree, sub_parser)
-    for _, ex in ipairs(exclusions) do
-      table.insert(ex, {tree:root():range()})
-    end
-    table.insert(exclusions, {})
+    table.insert(exclusions, {tree:root():range()})
     num_trees = num_trees + 1
   end)
 
   local i = 1
   state.parser:for_each_tree(function(tree, sub_parser)
-    local new_items = update_range(bufnr, tree, sub_parser:lang(), exclusions[i], pool)
+    -- filter and sort exclusions so we can use binary search on it later
+    local ex = {}
+    for j = i+1, #exclusions do
+      if range_overlap(exclusions[i], exclusions[j]) then
+        table.insert(ex, {start=exclusions[j], finish={exclusions[j][3], exclusions[j][4]}})
+      end
+    end
+    table.sort(ex, function(x, y) return tuple_cmp(x.start, y.start) < 0 end)
+
+    local new_items = update_range(bufnr, tree, sub_parser:lang(), ex, pool)
     if new_items then
       vim.list_extend(state.items, new_items)
     end
