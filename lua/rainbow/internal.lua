@@ -179,8 +179,8 @@ local function update_range(bufnr, tree, lang, pool)
         table.insert(items, item)
 
       elseif name == 'middle' then
-          item.type = MIDDLE
-          table.insert(items, item)
+        item.type = MIDDLE
+        table.insert(items, item)
 
       elseif name == 'scope' then
         item.type = SCOPE_LEFT
@@ -311,6 +311,13 @@ function M.attach(bufnr, lang)
       end
     end,
   })
+
+  vim.api.nvim_create_autocmd('BufReadPost', {buffer=bufnr, callback=function()
+    if not parsers.get_parser(bufnr) then
+      M.detach(bufnr)
+    end
+  end})
+
 end
 
 --- Detach module from buffer. Called when `:TSBufDisable rainbow`.
