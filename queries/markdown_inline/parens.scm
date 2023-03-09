@@ -1,0 +1,11 @@
+(inline "(" @left.round)
+(inline ")" @right.round)
+(inline "[" @left.square)
+(inline "]" @right.square)
+
+(inline_link "(" @left.round)
+(inline_link ")" @right.round)
+(inline_link "[" @left.square)
+(inline_link "]" @right.square)
+(shortcut_link "[" @left.square)
+(shortcut_link "]" @right.square)

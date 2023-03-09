@@ -35,7 +35,7 @@ local LEFT = 1
 local RIGHT = 2
 local MIDDLE = 3
 local SCOPE_LEFT = 4
-local SCOPE_RIGHT = 4
+local SCOPE_RIGHT = 5
 
 local function tuple_cmp(x, y)
   if     x[1] < y[1] then
@@ -103,8 +103,8 @@ end
 --- @param bufnr number # Buffer number
 --- @param tree table # Syntax tree
 --- @param lang string # Language
---- @param list of excluded ranges
-local function update_range(bufnr, tree, lang, exclusions, pool)
+--- @param pool of tables for reuse
+local function update_range(bufnr, tree, lang, pool)
   if vim.fn.pumvisible() ~= 0 or not lang then
     return
   end
@@ -131,22 +131,6 @@ local function update_range(bufnr, tree, lang, exclusions, pool)
     elseif seen[node:id()] then
       -- skip nodes we have already processed
       -- this can happen if a node is captured multiple times
-    elseif #exclusions > 0 and (function()
-        -- check if node overlaps with an exclusion range
-        -- either the start or the end should lie in a exclusion
-        local item, found = binsearch_items(exclusions, {node:start()})
-        if not found then
-          local range = {node:end_()}
-          range[2] = range[2] - 1
-          if range[2] < 1 then
-            range = {range[1]-1, 0}
-          end
-          item, found = binsearch_items(exclusions, range)
-        end
-
-        return found
-    end)() then
-      -- skip any nodes in the excluded range
     else
       seen[node:id()] = true
       local name, kind = query.captures[id]:match('^([^.]*)%.(.*)$')
@@ -271,31 +255,12 @@ local function update_all_trees(bufnr, force)
   local pool = state.items or {}
   state.items = {}
 
-  -- later trees override earlier trees, so construct the ranges where earlier trees don't apply
-  -- we can't just drop/override highlights in those ranges
-  -- we need to exclude them from calculation altogether or matching will be off
-  local exclusions = {}
   state.parser:for_each_tree(function(tree, sub_parser)
-    table.insert(exclusions, {tree:root():range()})
-    num_trees = num_trees + 1
-  end)
-
-  local i = 1
-  state.parser:for_each_tree(function(tree, sub_parser)
-    -- filter and sort exclusions so we can use binary search on it later
-    local ex = {}
-    for j = i+1, #exclusions do
-      if range_overlap(exclusions[i], exclusions[j]) then
-        table.insert(ex, {start=exclusions[j], finish={exclusions[j][3], exclusions[j][4]}})
-      end
-    end
-    table.sort(ex, function(x, y) return tuple_cmp(x.start, y.start) < 0 end)
-
-    local new_items = update_range(bufnr, tree, sub_parser:lang(), ex, pool)
+    local new_items = update_range(bufnr, tree, sub_parser:lang(), pool)
     if new_items then
+      num_trees = num_trees + 1
       vim.list_extend(state.items, new_items)
     end
-    i = i + 1
   end)
 
   -- don't need to sort if only 1 tree
