@@ -331,7 +331,7 @@ local function on_line(_, win, bufnr, row)
   update_all_trees(bufnr)
 
   local items = state_table[bufnr].items
-  local start, finish = get_items_in_range(items, {row, 0}, {row+1, 0})
+  local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
   for i = start, finish-1 do
     local item = items[i]
     if item.type ~= MIDDLE or (item.level and highlight_middle) then
