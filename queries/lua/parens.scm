@@ -9,5 +9,3 @@
 "elseif" @middle.block
 "else" @middle.block
 "end" @right.block
-(string start: _ @left.square.double.string (#match? @left.square.double.string "\\[[=]*\\[") )
-(string end: _ @right.square.double.string (#match? @right.square.double.string "\\][=]*\\]") )
