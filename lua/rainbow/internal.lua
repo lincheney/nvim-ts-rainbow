@@ -16,6 +16,7 @@
 --]]
 
 local M = {}
+local NAME = 'rainbow'
 
 local parsers = require('nvim-treesitter.parsers')
 local configs = require('nvim-treesitter.configs')
@@ -24,10 +25,10 @@ local highlighter = vim.treesitter.highlighter
 local nsid = vim.api.nvim_create_namespace('rainbow_ns')
 
 local rainbow_query = require('rainbow.query')
-local colors = configs.get_module('rainbow').colors
-local unmatched_color = configs.get_module('rainbow').unmatched_color
-local priority = configs.get_module('rainbow').priority
-local highlight_middle = configs.get_module('rainbow').highlight_middle
+local colors = configs.get_module(NAME).colors
+local unmatched_color = configs.get_module(NAME).unmatched_color
+local priority = configs.get_module(NAME).priority
+local highlight_middle = configs.get_module(NAME).highlight_middle
 
 local state_table = {}
 
@@ -256,10 +257,17 @@ local function update_all_trees(bufnr, force)
   state.items = {}
 
   state.parser:for_each_tree(function(tree, sub_parser)
-    local new_items = update_range(bufnr, tree, sub_parser:lang(), pool)
-    if new_items then
-      num_trees = num_trees + 1
-      vim.list_extend(state.items, new_items)
+    local lang = sub_parser:lang()
+    if state.enabled_langs[lang] == nil then
+      state.enabled_langs[lang] = configs.is_enabled(NAME, lang, bufnr)
+    end
+
+    if state.enabled_langs[lang] then
+      local new_items = update_range(bufnr, tree, lang, pool)
+      if new_items then
+        num_trees = num_trees + 1
+        vim.list_extend(state.items, new_items)
+      end
     end
   end)
 
@@ -273,7 +281,7 @@ end
 --- @param bufnr number # Buffer number
 --- @param lang string # Buffer language
 function M.attach(bufnr, lang)
-  local config = configs.get_module('rainbow')
+  local config = configs.get_module(NAME)
   config = config or {}
   ---@diagnostic disable-next-line
   local max_file_lines = config.max_file_lines or 9999999
@@ -288,6 +296,7 @@ function M.attach(bufnr, lang)
     byte_changes = {},
     items = nil,
     parser = parser,
+    enabled_langs = {},
   }
 
   parser:register_cbs({
