@@ -1,1 +1,1 @@
-; inherits: square,round,curly,angle
+; inherits: _square,_round,_curly,_angle

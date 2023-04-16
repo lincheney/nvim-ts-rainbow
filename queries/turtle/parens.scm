@@ -1,2 +1,2 @@
-; inherits: square,round
+; inherits: _square,_round
 (anon) @paren

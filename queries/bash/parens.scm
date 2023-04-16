@@ -1,4 +1,4 @@
-; inherits: curly,square
+; inherits: _curly,_square
 
 "[[" @left.square.double
 ; "&&" @middle.square.double

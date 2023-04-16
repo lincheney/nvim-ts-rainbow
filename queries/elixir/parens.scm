@@ -1,4 +1,4 @@
-; inherits: square,round,curly,comma
+; inherits: _square,_round,_curly,_comma
 (bitstring
   "<<" @left.angle.double
   ">>" @right.angle.double)

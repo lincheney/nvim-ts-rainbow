@@ -1,4 +1,4 @@
-; inherits curly,square,comma
+; inherits _curly,_square,_comma
 
 (block_mapping) @scope.mapping
 (block_mapping_pair . key: _ @middle.mapping)

@@ -1,4 +1,4 @@
-; inherits: square,round,curly,comma
+; inherits: _square,_round,_curly,_comma
 
 (for_statement "for" @middle.for "in" @middle.for ":" @middle.for
     (else_clause "else" @middle.for ":" @middle.for)?

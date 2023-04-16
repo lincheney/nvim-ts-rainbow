@@ -2,7 +2,7 @@ local M = {}
 
 local treesitter_query = require('nvim-treesitter.query')
 local query_name = 'parens'
-local fallback_queries = {'square', 'curly', 'round', 'comma'}
+local fallback_queries = {'_square', '_curly', '_round', '_comma'}
 
 local queries = {}
 local query_strings = {}

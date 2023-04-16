@@ -1,2 +1,2 @@
-; inherits: square,round,curly
+; inherits: _square,_round,_curly
 "|" @paren

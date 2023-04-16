@@ -1,4 +1,4 @@
-; inherits round, curly, comma
+; inherits _round, _curly, _comma
 (function_call ")" @right.round)
 (function_call "(" @left.round)
 
