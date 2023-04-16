@@ -10,7 +10,7 @@ local query_strings = {}
 local function load_query(name)
   if not query_strings[name] then
     local contents = {}
-    for _, file in ipairs(vim.treesitter.query.get_query_files(name, query_name)) do
+    for _, file in ipairs(vim.treesitter.query.get_files(name, query_name)) do
       table.insert(contents, table.concat(vim.fn.readfile(file), '\n'))
     end
     query_strings[name] = table.concat(contents, '\n')
@@ -35,7 +35,7 @@ function M.get_query(lang)
     queries[lang] = treesitter_query.get_query(lang, query_name)
 
     if not queries[lang] then
-      local ok, query = pcall(vim.treesitter.query.parse_query, lang, get_default_query())
+      local ok, query = pcall(vim.treesitter.query.parse, lang, get_default_query())
       if ok then
         queries[lang] = query
       end
@@ -45,7 +45,7 @@ function M.get_query(lang)
       -- check one by one if square, curly, round work
       local working = {}
       for _, name in ipairs(fallback_queries) do
-        if pcall(vim.treesitter.query.parse_query, lang, load_query(name)) then
+        if pcall(vim.treesitter.query.parse, lang, load_query(name)) then
           table.insert(working, load_query(name))
         end
       end
@@ -54,7 +54,7 @@ function M.get_query(lang)
         return
       end
 
-      queries[lang] = vim.treesitter.query.parse_query(lang, table.concat(working, '\n'))
+      queries[lang] = vim.treesitter.query.parse(lang, table.concat(working, '\n'))
     end
   end
 
