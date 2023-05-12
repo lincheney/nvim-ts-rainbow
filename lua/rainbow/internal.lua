@@ -105,7 +105,7 @@ end
 --- @param tree table # Syntax tree
 --- @param lang string # Language
 --- @param pool of tables for reuse
-local function update_range(bufnr, tree, lang, pool)
+local function update_range(bufnr, tree, lang, pool, tree_num)
   if vim.fn.pumvisible() ~= 0 or not lang then
     return
   end
@@ -138,6 +138,7 @@ local function update_range(bufnr, tree, lang, pool)
 
       -- recycle tables from the pool
       local item = table.remove(pool) or {}
+      item.tree_num = tree_num
       item.kind = kind
       item.matched = false
       item.level = nil
@@ -263,7 +264,7 @@ local function update_all_trees(bufnr, force)
     end
 
     if state.enabled_langs[lang] then
-      local new_items = update_range(bufnr, tree, lang, pool)
+      local new_items = update_range(bufnr, tree, lang, pool, num_trees)
       if new_items then
         num_trees = num_trees + 1
         vim.list_extend(state.items, new_items)
@@ -273,7 +274,14 @@ local function update_all_trees(bufnr, force)
 
   -- don't need to sort if only 1 tree
   if num_trees > 1 then
-    table.sort(state.items, function(x, y) return tuple_cmp(x.start, y.start) < 0 end)
+    table.sort(state.items, function(x, y)
+      local cmp = tuple_cmp(x.start, y.start)
+      if cmp == 0 then
+        return x.tree_num < y.tree_num
+      else
+        return cmp < 0
+      end
+    end)
   end
 end
 
