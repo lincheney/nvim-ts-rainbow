@@ -9,3 +9,5 @@
 "elseif" @middle.block
 "else" @middle.block
 "end" @right.block
+"repeat" @left.repeat-until
+"until" @right.repeat-until
