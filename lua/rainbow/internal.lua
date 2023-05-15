@@ -84,6 +84,7 @@ end
 local function finish_scope(scope, pool)
   -- recycle tables from the pool
   local scope_end = table.remove(pool) or {}
+  scope_end.tree_num = scope.tree_num
   scope_end.kind = scope.kind
   scope_end.type = SCOPE_RIGHT
   scope_end.matched = true
