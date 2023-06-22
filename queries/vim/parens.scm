@@ -19,8 +19,5 @@
 "finally" @middle.try
 "endtry" @right.try
 
-(augroup_statement "augroup" @right.augroup . (augroup_name) @name (#eq? @name "END"))
-(augroup_statement "augroup" @left.augroup . (augroup_name))
-
 (pattern _ @left.round.pattern (#any-of? @left.round.pattern "\\(" "\\%("))
 (pattern _ @right.round.pattern (#eq? @left.round.pattern "\\)"))
