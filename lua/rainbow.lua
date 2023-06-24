@@ -1,4 +1,4 @@
-local M = {}
+local M = require('rainbow.constants')
 
 function M.init()
   require('nvim-treesitter').define_modules({
@@ -19,6 +19,10 @@ function M.init()
       unmatched_color = 'RainbowColUnmatched',
     },
   })
+end
+
+function M.get_matches(...)
+  return require('rainbow.internal').get_matches(...)
 end
 
 return M

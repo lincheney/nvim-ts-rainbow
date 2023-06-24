@@ -31,12 +31,7 @@ local priority = configs.get_module(NAME).priority
 local highlight_middle = configs.get_module(NAME).highlight_middle
 
 local state_table = {}
-
-local LEFT = 1
-local RIGHT = 2
-local MIDDLE = 3
-local SCOPE_LEFT = 4
-local SCOPE_RIGHT = 5
+local CONSTANTS = require('rainbow.constants')
 
 local function tuple_cmp(x, y)
   if     x[1] < y[1] then
@@ -86,7 +81,7 @@ local function finish_scope(scope, pool)
   local scope_end = table.remove(pool) or {}
   scope_end.tree_num = scope.tree_num
   scope_end.kind = scope.kind
-  scope_end.type = SCOPE_RIGHT
+  scope_end.type = CONSTANTS.SCOPE_RIGHT
   scope_end.matched = true
   if not scope_end.start then
     scope_end.start = {}
@@ -144,6 +139,7 @@ local function update_range(bufnr, tree, lang, pool, tree_num)
       item.matched = false
       item.level = nil
       item.hl = nil
+      item.right = nil
       if not item.start then
         item.start = {}
       end
@@ -160,18 +156,19 @@ local function update_range(bufnr, tree, lang, pool, tree_num)
 
       if name == 'left' then
         -- add to stack
-        item.type = LEFT
+        item.type = CONSTANTS.LEFT
+        item.right = metadata.right
         table.insert(stack, item)
         table.insert(items, item)
 
       elseif name == 'right' then
         -- find a matching opening bracket
-        item.type = RIGHT
+        item.type = CONSTANTS.RIGHT
         for i = 0, #stack-1 do
           local x = stack[#stack-i]
           if x.kind == kind then
-            x.matched = true
-            item.matched = true
+            x.matched = item
+            item.matched = x
             -- pop off the stack
             for j = #stack-i, #stack do
               stack[j] = nil
@@ -182,11 +179,11 @@ local function update_range(bufnr, tree, lang, pool, tree_num)
         table.insert(items, item)
 
       elseif name == 'middle' then
-        item.type = MIDDLE
+        item.type = CONSTANTS.MIDDLE
         table.insert(items, item)
 
       elseif name == 'scope' then
-        item.type = SCOPE_LEFT
+        item.type = CONSTANTS.SCOPE_LEFT
         item.matched = true
         table.insert(scopes, item)
         table.insert(items, item)
@@ -203,13 +200,13 @@ local function update_range(bufnr, tree, lang, pool, tree_num)
   -- set the level of each bracket, starting from 0
   local level = 0
   for _, item in ipairs(items) do
-    if item.type == MIDDLE then -- TODO currently we do not check for the kind for middle nodes
+    if item.type == CONSTANTS.MIDDLE then -- TODO currently we do not check for the kind for middle nodes
       item.level = level
     elseif item.matched then
-      if item.type == LEFT or item.type == SCOPE_LEFT then
+      if item.type == CONSTANTS.LEFT or item.type == CONSTANTS.SCOPE_LEFT then
         level = level + 1
         item.level = level
-      elseif item.type == RIGHT or item.type == SCOPE_RIGHT then
+      elseif item.type == CONSTANTS.RIGHT or item.type == CONSTANTS.SCOPE_RIGHT then
         item.level = level
         level = level - 1
       end
@@ -359,11 +356,11 @@ local function on_line(_, win, bufnr, row)
   local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
   for i = start, finish-1 do
     local item = items[i]
-    if item.type ~= MIDDLE or (item.level and highlight_middle) then
+    if item.type ~= CONSTANTS.MIDDLE or (item.level and highlight_middle) then
 
       if not item.hl then
         item.hl = unmatched_color
-        if item.matched or item.type == MIDDLE then
+        if item.matched or item.type == CONSTANTS.MIDDLE then
           item.hl = colors[(item.level-1) % #colors + 1]
         end
       end
@@ -392,5 +389,17 @@ vim.api.nvim_set_decoration_provider(nsid, {
     end
   end,
 })
+
+function M.get_matches(bufnr, start, finish)
+  if not bufnr or bufnr == 0 then
+    bufnr = vim.api.nvim_get_current_buf()
+  end
+  local start = start or {-1, math.huge}
+  local finish = finish or {math.huge, math.huge}
+  local items = state_table[bufnr].items
+  local start, finish = get_items_in_range(items, start, finish)
+
+  return vim.list_slice(items, start, finish-1)
+end
 
 return M

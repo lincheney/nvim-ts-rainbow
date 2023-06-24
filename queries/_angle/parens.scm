@@ -1,2 +1,2 @@
-"<" @left.angle
+("<" @left.angle (#set! "right" ">"))
 ">" @right.angle

@@ -1,2 +1,2 @@
-"{" @left.curly
+("{" @left.curly (#set! "right" "}"))
 "}" @right.curly

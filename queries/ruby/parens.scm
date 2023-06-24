@@ -1,5 +1,5 @@
 ; inherits: _square,_round,_curly,_comma
 
-"%w(" @left.round
-"%i(" @left.round
-"#{" @left.curly
+("%w(" @left.round (#set! "right" ")"))
+("%i(" @left.round (#set! "right" ")"))
+("#{" @left.curly (#set! "right" "}"))
