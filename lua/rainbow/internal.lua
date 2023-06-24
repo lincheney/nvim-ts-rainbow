@@ -358,7 +358,10 @@ end
 --- @param lang string # Buffer language
 function M.attach(bufnr, lang, config)
   if state_table[bufnr] then
-    return
+    if state_table[bufnr].lang == lang then
+      return
+    end
+    M.detach(bufnr)
   end
   lang = lang or get_lang(bufnr)
 
@@ -379,6 +382,7 @@ function M.attach(bufnr, lang, config)
   end
 
   state_table[bufnr] = {
+    lang = lang,
     changes = {},
     byte_changes = {},
     items = nil,
