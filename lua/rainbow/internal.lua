@@ -434,7 +434,7 @@ function M.attach(bufnr, lang, config)
 
   vim.api.nvim_create_autocmd('BufReadPost', {buffer=bufnr, callback=function()
     if state_table[bufnr] == state then
-      state_table[bufnr] = nil
+      M.detach(bufnr)
       M.attach(bufnr, nil, state.config)
     else
       -- detach
