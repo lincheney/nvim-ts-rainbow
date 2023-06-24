@@ -12,6 +12,7 @@ local config = {
   },
   unmatched_color = 'RainbowColUnmatched',
   enable = nil,
+  treesitter_enable = nil,
 
   matchers = {
     [''] = {
@@ -38,25 +39,19 @@ function M.setup(opts)
     config[k] = v
   end
   if type(config.enable) == 'table' then
-    config.enable = function(ft) return vim.tbl_contains(config.enable, ft) end
+    config.enable = function(buf, ft) return vim.tbl_contains(config.enable, ft) end
   end
-end
-
-local function handle_buffer(bufnr, ft)
-  if config.enable and not config.enable(ft, bufnr) then
-    M.detach(bufnr)
-  else
-    M.attach(bufnr, ft, config)
+  if type(config.treesitter_enable) == 'table' then
+    config.treesitter_enable = function(buf, ft) return vim.tbl_contains(config.treesitter_enable, ft) end
   end
 end
 
 function M.init()
   vim.api.nvim_create_autocmd('FileType', {callback=function(args)
-    local ft = args.match
-    handle_buffer(args.buf, ft)
+    M.attach(args.buf, args.match, config)
   end})
   for _, item in ipairs(vim.fn.getbufinfo{bufloaded=true}) do
-    handle_buffer(item.bufnr, vim.api.nvim_buf_get_option(item.bufnr, 'filetype'))
+    M.attach(item.bufnr, nil, config)
   end
 end
 

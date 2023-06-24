@@ -26,7 +26,7 @@ local CONSTANTS = require('rainbow.constants')
 
 local function get_lang(bufnr)
   local ft = vim.api.nvim_buf_get_option(bufnr, 'filetype'):match('[^.]*')
-  return vim.treesitter.language.get_lang(ft)
+  return vim.treesitter.language.get_lang(ft) or ft
 end
 
 local function get_parser(bufnr, lang)
@@ -314,7 +314,7 @@ local function update_all_trees(bufnr, force)
     state.parser:for_each_tree(function(tree, sub_parser)
       local lang = sub_parser:lang()
       if state.enabled_langs[lang] == nil then
-        state.enabled_langs[lang] = not state.config.enable or state.config.enable(lang, bufnr)
+        state.enabled_langs[lang] = not state.config.treesitter_enable or state.config.treesitter_enable(lang, bufnr)
       end
 
       if state.enabled_langs[lang] then
@@ -351,13 +351,24 @@ function M.attach(bufnr, lang, config)
   if state_table[bufnr] then
     return
   end
+  lang = lang or get_lang(bufnr)
 
-  ---@diagnostic disable-next-line
-  if config.max_file_lines ~= nil and vim.api.nvim_buf_line_count(bufnr) > config.max_file_lines then
+  if config.enable and not config.enable(bufnr, lang) then
+    M.detach(bufnr)
     return
   end
 
-  local parser = get_parser(bufnr, lang)
+  ---@diagnostic disable-next-line
+  if config.max_file_lines ~= nil and vim.api.nvim_buf_line_count(bufnr) > config.max_file_lines then
+    M.detach(bufnr)
+    return
+  end
+
+  local parser = nil
+  if not config.treesitter_enable or config.treesitter_enable(bufnr, lang) then
+    parser = get_parser(bufnr, lang)
+  end
+
   state_table[bufnr] = {
     changes = {},
     byte_changes = {},
@@ -414,10 +425,9 @@ function M.attach(bufnr, lang, config)
 
   vim.api.nvim_create_autocmd('BufReadPost', {buffer=bufnr, callback=function()
     if state_table[bufnr] then
-      local parser = get_parser(bufnr)
-      if parser ~= state_table[bufnr].parser then
-        M.attach(bufnr, nil, state_table[bufnr].config)
-      end
+      config = state_table[bufnr].config
+      state_table[bufnr] = nil
+      M.attach(bufnr, nil, config)
     else
       -- detach
       return true
