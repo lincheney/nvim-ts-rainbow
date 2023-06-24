@@ -378,7 +378,9 @@ function M.attach(bufnr, lang, config)
 
   local parser = nil
   if not config.treesitter_enable or config.treesitter_enable(bufnr, lang) then
-    parser = get_parser(bufnr, lang)
+    if rainbow_query.get_query(lang) then
+      parser = get_parser(bufnr, lang)
+    end
   end
 
   state_table[bufnr] = {
