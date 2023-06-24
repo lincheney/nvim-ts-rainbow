@@ -13,6 +13,7 @@ local config = {
   unmatched_color = 'RainbowColUnmatched',
   enable = nil,
   treesitter_enable = nil,
+  ignore_syntax = {Comment=true, String=true},
 
   matchers = {
     [''] = {
@@ -43,6 +44,12 @@ function M.setup(opts)
   end
   if type(config.treesitter_enable) == 'table' then
     config.treesitter_enable = function(buf, ft) return vim.tbl_contains(config.treesitter_enable, ft) end
+  end
+  if #config.ignore_syntax > 0 then
+    for k, v in ipairs(config.ignore_syntax) do
+      config.ignore_syntax[k] = nil
+      config.ignore_syntax[v] = true
+    end
   end
 end
 

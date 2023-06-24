@@ -239,9 +239,11 @@ local function update_buffer_range(bufnr, pool, tree_num)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local matchers = state_table[bufnr].matchers
   local pattern = state_table[bufnr].matchers_pattern
+  local ignore_syntax = state_table[bufnr].config.ignore_syntax
   local row = 1
   local col = 1
 
+  local inspect_opts = {semantic_tokens=false, extmarks=false}
   local iterator = function()
     while row <= #lines do
       local line = lines[row]
@@ -249,7 +251,13 @@ local function update_buffer_range(bufnr, pool, tree_num)
       if start_col then
         col = start_col + 1
         local opt = matchers[line:sub(start_col, end_col)]
-        return opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col
+
+        -- local attrs = vim.inspect_pos(bufnr, row-1, start_col-1, inspect_opts) -- too slow
+        local syntax = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.synID(row, start_col, 1)), 'name')
+        if not ignore_syntax[syntax] then
+          return opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col
+        end
+
       else
         row = row + 1
         col = 1
