@@ -16,7 +16,6 @@
 --]]
 
 local M = {}
-local NAME = 'rainbow'
 
 local rainbow_query = require('rainbow.query')
 local nsid = vim.api.nvim_create_namespace('rainbow_ns')
@@ -243,7 +242,7 @@ local function update_buffer_range(bufnr, pool, tree_num)
   local row = 1
   local col = 1
 
-  local inspect_opts = {semantic_tokens=false, extmarks=false}
+  -- local inspect_opts = {semantic_tokens=false, extmarks=false}
   local iterator = function()
     while row <= #lines do
       local line = lines[row]
