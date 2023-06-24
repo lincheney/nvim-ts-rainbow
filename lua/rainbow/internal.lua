@@ -288,7 +288,8 @@ local function need_invalidate(bufnr)
       end
       -- if not treesitter, can't rely on tree changes
       -- in this case check the patterns
-      if not state.parser and table.concat(vim.api.nvim_buf_get_text(bufnr, change[1], change[2], change[3], change[4], {}), '\n'):match(state.matchers_pattern) then
+      -- if it is a delete, always invalidate; since we don't know what was deleted
+      if not state.parser and (change.delete or table.concat(vim.api.nvim_buf_get_text(bufnr, change[1], change[2], change[3], change[4], {}), '\n'):match(state.matchers_pattern)) then
         return true
       end
     end
@@ -403,6 +404,7 @@ function M.attach(bufnr, lang, config)
         start_col + math.min(0, end_col-old_end_col),
         start_row + math.max(0, end_row-old_end_row),
         start_col + math.max(0, end_col-old_end_col),
+        delete = old_end_col > end_col,
       }
       table.insert(state.byte_changes, change);
     else
