@@ -18,20 +18,24 @@
 local M = {}
 local NAME = 'rainbow'
 
-local parsers = require('nvim-treesitter.parsers')
-local configs = require('nvim-treesitter.configs')
-local highlighter = vim.treesitter.highlighter
-
-local nsid = vim.api.nvim_create_namespace('rainbow_ns')
-
 local rainbow_query = require('rainbow.query')
-local colors = configs.get_module(NAME).colors
-local unmatched_color = configs.get_module(NAME).unmatched_color
-local priority = configs.get_module(NAME).priority
-local highlight_middle = configs.get_module(NAME).highlight_middle
+local nsid = vim.api.nvim_create_namespace('rainbow_ns')
 
 local state_table = {}
 local CONSTANTS = require('rainbow.constants')
+
+local function get_lang(bufnr)
+  local ft = vim.api.nvim_buf_get_option(bufnr, 'filetype'):match('[^.]*')
+  return vim.treesitter.language.get_lang(ft)
+end
+
+local function get_parser(bufnr, lang)
+  lang = lang or get_lang(bufnr)
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, lang)
+  if ok then
+    return parser
+  end
+end
 
 local function tuple_cmp(x, y)
   if     x[1] < y[1] then
@@ -101,96 +105,71 @@ end
 --- @param tree table # Syntax tree
 --- @param lang string # Language
 --- @param pool of tables for reuse
-local function update_range(bufnr, tree, lang, pool, tree_num)
-  if vim.fn.pumvisible() ~= 0 or not lang then
-    return
-  end
-
-  -- load the query
-  local query = rainbow_query.get_query(lang)
-  if not query then
-    return
-  end
-
-  local root = tree:root()
-
+local function update_range(bufnr, iterator, pool, tree_num)
   -- invalidate everything for now
   -- figure out how to do damage later
   local items = {}
-
-  local seen = {}
   local stack = {}
   local scopes = {}
 
+  for type, kind, metadata, start_row, start_col, end_row, end_col in iterator do
+    -- recycle tables from the pool
+    local item = table.remove(pool) or {}
+    item.type = type
+    item.tree_num = tree_num
+    item.kind = kind
+    item.matched = false
+    item.level = nil
+    item.hl = nil
+    item.right = nil
+    if not item.start then
+      item.start = {}
+    end
+    if not item.finish then
+      item.finish = {}
+    end
+    item.start[1] = start_row
+    item.start[2] = start_col
+    item.finish[1] = end_row
+    item.finish[2] = end_col
 
-  for id, node, metadata in query:iter_captures(root, bufnr, 0, -1) do
-    if node:has_error() then
-    elseif seen[node:id()] then
-      -- skip nodes we have already processed
-      -- this can happen if a node is captured multiple times
-    else
-      seen[node:id()] = true
-      local name, kind = query.captures[id]:match('^([^.]*)%.(.*)$')
+    while #scopes > 0 and tuple_cmp(item.start, scopes[#scopes].finish) >= 0 do
+      -- this scope has finished
+      table.insert(items, finish_scope(table.remove(scopes), pool))
+    end
 
-      -- recycle tables from the pool
-      local item = table.remove(pool) or {}
-      item.tree_num = tree_num
-      item.kind = kind
-      item.matched = false
-      item.level = nil
-      item.hl = nil
-      item.right = nil
-      if not item.start then
-        item.start = {}
-      end
-      if not item.finish then
-        item.finish = {}
-      end
-      item.start[1], item.start[2] = node:start()
-      item.finish[1], item.finish[2] = node:end_()
+    if type == CONSTANTS.LEFT then
+      -- add to stack
+      item.right = metadata.right
+      table.insert(stack, item)
+      table.insert(items, item)
 
-      while #scopes > 0 and tuple_cmp(item.start, scopes[#scopes].finish) >= 0 do
-        -- this scope has finished
-        table.insert(items, finish_scope(table.remove(scopes), pool))
-      end
-
-      if name == 'left' then
-        -- add to stack
-        item.type = CONSTANTS.LEFT
-        item.right = metadata.right
-        table.insert(stack, item)
-        table.insert(items, item)
-
-      elseif name == 'right' then
-        -- find a matching opening bracket
-        item.type = CONSTANTS.RIGHT
-        for i = 0, #stack-1 do
-          local x = stack[#stack-i]
-          if x.kind == kind then
-            x.matched = item
-            item.matched = x
-            -- pop off the stack
-            for j = #stack-i, #stack do
-              stack[j] = nil
-            end
-            break
+    elseif type == CONSTANTS.RIGHT then
+      -- find a matching opening bracket
+      for i = 0, #stack-1 do
+        local x = stack[#stack-i]
+        if x.kind == kind then
+          x.matched = item
+          item.matched = x
+          -- pop off the stack
+          for j = #stack-i, #stack do
+            stack[j] = nil
           end
+          break
         end
-        table.insert(items, item)
-
-      elseif name == 'middle' then
-        item.type = CONSTANTS.MIDDLE
-        table.insert(items, item)
-
-      elseif name == 'scope' then
-        item.type = CONSTANTS.SCOPE_LEFT
-        item.matched = true
-        table.insert(scopes, item)
-        table.insert(items, item)
-
       end
+      table.insert(items, item)
+
+    elseif type == CONSTANTS.MIDDLE then
+      table.insert(items, item)
+
+    elseif type == CONSTANTS.SCOPE_LEFT then
+      item.matched = true
+      table.insert(scopes, item)
+      table.insert(items, item)
 
     end
+
   end
 
   for _, scope in ipairs(scopes) do
@@ -215,6 +194,72 @@ local function update_range(bufnr, tree, lang, pool, tree_num)
   return items
 end
 
+local function update_tree_range(bufnr, tree, lang, pool, tree_num)
+  if not lang then
+    return
+  end
+
+  -- load the query
+  local query = rainbow_query.get_query(lang)
+  if not query then
+    return
+  end
+
+  local root = tree:root()
+  local seen = {}
+
+  local type_map = {left=CONSTANTS.LEFT, right=CONSTANTS.RIGHT, middle=CONSTANTS.MIDDLE, scope=CONSTANTS.SCOPE_LEFT}
+  local iter, state, var = query:iter_captures(root, bufnr, 0, -1)
+  local iterator = function()
+    while true do
+      local id, node, metadata = iter(state, var)
+      if id == nil then
+        return nil
+      end
+      var = id
+
+      if node:has_error() then
+      elseif seen[node:id()] then
+        -- skip nodes we have already processed
+        -- this can happen if a node is captured multiple times
+      else
+        seen[node:id()] = true
+        local name, kind = query.captures[id]:match('^([^.]*)%.(.*)$')
+        local start_row, start_col = node:start()
+        local end_row, end_col = node:end_()
+        return type_map[name], kind, metadata, start_row, start_col, end_row, end_col
+      end
+    end
+  end
+
+  return update_range(bufnr, iterator, pool, tree_num)
+end
+
+local function update_buffer_range(bufnr, pool, tree_num)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local matchers = state_table[bufnr].matchers
+  local pattern = state_table[bufnr].matchers_pattern
+  local row = 1
+  local col = 1
+
+  local iterator = function()
+    while row <= #lines do
+      local line = lines[row]
+      local start_col, end_col = line:find(pattern, col)
+      if start_col then
+        col = start_col + 1
+        local opt = matchers[line:sub(start_col, end_col)]
+        return opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col
+      else
+        row = row + 1
+        col = 1
+      end
+    end
+  end
+
+  return update_range(bufnr, iterator, pool, tree_num)
+end
+
 local function need_invalidate(bufnr)
   local state = state_table[bufnr]
 
@@ -233,6 +278,11 @@ local function need_invalidate(bufnr)
       if item and (change[1] ~= change[3] or item.start[1] == change[1]) then
         return true
       end
+      -- if not treesitter, can't rely on tree changes
+      -- in this case check the patterns
+      if not state.parser and table.concat(vim.api.nvim_buf_get_text(bufnr, change[1], change[2], change[3], change[4], {}), '\n'):match(state.matchers_pattern) then
+        return true
+      end
     end
 
   end
@@ -242,6 +292,10 @@ local function need_invalidate(bufnr)
 end
 
 local function update_all_trees(bufnr, force)
+  if vim.fn.pumvisible() ~= 0 then
+    return
+  end
+
   local invalidate = force or need_invalidate(bufnr)
 
   local state = state_table[bufnr]
@@ -253,22 +307,29 @@ local function update_all_trees(bufnr, force)
 
   local num_trees = 0
   local pool = state.items or {}
-  state.items = {}
 
-  state.parser:for_each_tree(function(tree, sub_parser)
-    local lang = sub_parser:lang()
-    if state.enabled_langs[lang] == nil then
-      state.enabled_langs[lang] = configs.is_enabled(NAME, lang, bufnr)
-    end
-
-    if state.enabled_langs[lang] then
-      local new_items = update_range(bufnr, tree, lang, pool, num_trees)
-      if new_items then
-        num_trees = num_trees + 1
-        vim.list_extend(state.items, new_items)
+  if state.parser then
+    local lang = get_lang(bufnr)
+    state.items = {}
+    state.parser:for_each_tree(function(tree, sub_parser)
+      local lang = sub_parser:lang()
+      if state.enabled_langs[lang] == nil then
+        state.enabled_langs[lang] = not state.config.enable or state.config.enable(lang, bufnr)
       end
-    end
-  end)
+
+      if state.enabled_langs[lang] then
+        local new_items = update_tree_range(bufnr, tree, lang, pool, num_trees)
+        if new_items then
+          num_trees = num_trees + 1
+          vim.list_extend(state.items, new_items)
+        end
+      end
+    end)
+
+  else
+    state.items = update_buffer_range(bufnr, pool, num_trees)
+    num_trees = num_trees + 1
+  end
 
   -- don't need to sort if only 1 tree
   if num_trees > 1 then
@@ -286,50 +347,80 @@ end
 --- Attach module to buffer. Called when new buffer is opened or `:TSBufEnable rainbow`.
 --- @param bufnr number # Buffer number
 --- @param lang string # Buffer language
-function M.attach(bufnr, lang)
-  local config = configs.get_module(NAME)
-  config = config or {}
-  ---@diagnostic disable-next-line
-  local max_file_lines = config.max_file_lines or 9999999
-  if max_file_lines ~= nil and vim.api.nvim_buf_line_count(bufnr) > max_file_lines then
+function M.attach(bufnr, lang, config)
+  if state_table[bufnr] then
     return
   end
 
-  -- register_predicates(config)
-  local parser = parsers.get_parser(bufnr, lang)
+  ---@diagnostic disable-next-line
+  if config.max_file_lines ~= nil and vim.api.nvim_buf_line_count(bufnr) > config.max_file_lines then
+    return
+  end
+
+  local parser = get_parser(bufnr, lang)
   state_table[bufnr] = {
     changes = {},
     byte_changes = {},
     items = nil,
     parser = parser,
     enabled_langs = {},
+    config = config,
   }
 
-  parser:register_cbs({
-    on_changedtree = function(changes, tree)
-      if state_table[bufnr] then
-        vim.list_extend(state_table[bufnr].changes, changes)
-      end
-    end,
-    on_bytes = function(bufnr, tick, start_row, start_col, offset, old_end_row, old_end_col, old_len, end_row, end_col, len)
-      -- sometimes there's no syntax/tree changes, but there are byte changes
-      -- these can shift the positions of later brackets
-      -- so we reparse in these cases
-      if state_table[bufnr] then
-        local change = {
-          start_row + math.min(0, end_row-old_end_row),
-          start_col + math.min(0, end_col-old_end_col),
-          start_row + math.max(0, end_row-old_end_row),
-          start_col + math.max(0, end_col-old_end_col),
-        }
-        table.insert(state_table[bufnr].byte_changes, change);
-      end
-    end,
-  })
+  state_table[bufnr].matchers = config.matchers[lang] or config.matchers['']
+  if config.additional_matchers[lang] then
+    state_table[bufnr].matchers = {table.unpack(config.matchers), table.unpack(config.additional_matchers[lang])}
+  end
+  state_table[bufnr].matchers_pattern = '['..table.concat(vim.tbl_keys(state_table[bufnr].matchers), ''):gsub('[%]%%]', '%%%1')..']'
+
+  local on_bytes = function(bufnr, tick, start_row, start_col, offset, old_end_row, old_end_col, old_len, end_row, end_col, len)
+    -- sometimes there's no syntax/tree changes, but there are byte changes
+    -- these can shift the positions of later brackets
+    -- so we reparse in these cases
+    if state_table[bufnr] then
+      local change = {
+        start_row + math.min(0, end_row-old_end_row),
+        start_col + math.min(0, end_col-old_end_col),
+        start_row + math.max(0, end_row-old_end_row),
+        start_col + math.max(0, end_col-old_end_col),
+      }
+      table.insert(state_table[bufnr].byte_changes, change);
+    else
+      -- detach
+      return true
+    end
+  end
+
+  if parser then
+    parser:register_cbs({
+      on_changedtree = function(changes, tree)
+        if state_table[bufnr] then
+          vim.list_extend(state_table[bufnr].changes, changes)
+        end
+      end,
+      on_bytes = on_bytes,
+    })
+  else
+    local attached = vim.api.nvim_buf_attach(bufnr, false, {
+      on_bytes = function(_bytes, ...) return on_bytes(...) end,
+      on_detach = function(_detach, bufnr) M.detach(bufnr) end,
+    })
+    if not attached then
+      -- failed attaching
+      state_table[bufnr] = nil
+      return
+    end
+  end
 
   vim.api.nvim_create_autocmd('BufReadPost', {buffer=bufnr, callback=function()
-    if not parsers.get_parser(bufnr) then
-      M.detach(bufnr)
+    if state_table[bufnr] then
+      local parser = get_parser(bufnr)
+      if parser ~= state_table[bufnr].parser then
+        M.attach(bufnr, nil, state_table[bufnr].config)
+      end
+    else
+      -- detach
+      return true
     end
   end})
 
@@ -345,8 +436,9 @@ local function on_line(_, win, bufnr, row)
   if not state_table[bufnr] then
     return
   end
+  local config = state_table[bufnr].config
 
-  if #colors == 0 then
+  if #config.colors == 0 then
     return
   end
 
@@ -356,12 +448,12 @@ local function on_line(_, win, bufnr, row)
   local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
   for i = start, finish-1 do
     local item = items[i]
-    if item.type ~= CONSTANTS.MIDDLE or (item.level and highlight_middle) then
+    if item.type ~= CONSTANTS.MIDDLE or (item.level and config.highlight_middle) then
 
       if not item.hl then
-        item.hl = unmatched_color
+        item.hl = config.unmatched_color
         if item.matched or item.type == CONSTANTS.MIDDLE then
-          item.hl = colors[(item.level-1) % #colors + 1]
+          item.hl = config.colors[(item.level-1) % #config.colors + 1]
         end
       end
 
@@ -370,7 +462,7 @@ local function on_line(_, win, bufnr, row)
         end_col = item.finish[2],
         hl_group = item.hl,
         ephemeral = true,
-        priority = priority,
+        priority = config.priority,
       })
     end
   end
@@ -384,7 +476,7 @@ vim.api.nvim_set_decoration_provider(nsid, {
   on_buf = function(_, bufnr)
     -- if we are using treesitter highlighting, it will do this for us
     -- otherwise, we have to do it
-    if state_table[bufnr] and not highlighter.active[bufnr] then
+    if state_table[bufnr] and state_table[bufnr].parser and not vim.treesitter.highlighter.active[bufnr] then
       state_table[bufnr].parser:parse()
     end
   end,

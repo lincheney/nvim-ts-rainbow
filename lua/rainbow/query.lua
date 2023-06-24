@@ -1,6 +1,5 @@
 local M = {}
 
-local treesitter_query = require('nvim-treesitter.query')
 local query_name = 'parens'
 local fallback_queries = {'_square', '_curly', '_round', '_comma'}
 
@@ -32,12 +31,7 @@ end
 
 function M.get_query(lang)
   if not queries[lang] then
-    local ok, result = pcall(treesitter_query.get_query, lang, query_name)
-    if ok then
-      queries[lang] = result
-    else
-      print(result)
-    end
+    queries[lang] = vim.treesitter.query.get(lang, query_name)
 
     if not queries[lang] then
       local ok, query = pcall(vim.treesitter.query.parse, lang, get_default_query())
