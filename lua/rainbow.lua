@@ -48,10 +48,10 @@ end
 
 function M.init()
   vim.api.nvim_create_autocmd('FileType', {callback=function(args)
-    M.attach(args.buf, args.match, config)
+    M.attach(args.buf)
   end})
   for _, item in ipairs(vim.fn.getbufinfo{bufloaded=true}) do
-    M.attach(item.bufnr, nil, config)
+    M.attach(item.bufnr)
   end
 end
 
