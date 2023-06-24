@@ -392,7 +392,7 @@ function M.attach(bufnr, lang, config)
     enabled_langs = {},
     config = config,
   }
-  state = state_table[bufnr]
+  local state = state_table[bufnr]
 
   state.matchers = config.matchers[lang] or config.matchers['']
   if config.additional_matchers[lang] then
