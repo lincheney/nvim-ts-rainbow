@@ -377,25 +377,26 @@ function M.attach(bufnr, lang, config)
     enabled_langs = {},
     config = config,
   }
+  state = state_table[bufnr]
 
-  state_table[bufnr].matchers = config.matchers[lang] or config.matchers['']
+  state.matchers = config.matchers[lang] or config.matchers['']
   if config.additional_matchers[lang] then
-    state_table[bufnr].matchers = {table.unpack(config.matchers), table.unpack(config.additional_matchers[lang])}
+    state.matchers = {table.unpack(config.matchers), table.unpack(config.additional_matchers[lang])}
   end
-  state_table[bufnr].matchers_pattern = '['..table.concat(vim.tbl_keys(state_table[bufnr].matchers), ''):gsub('[%]%%]', '%%%1')..']'
+  state.matchers_pattern = '['..table.concat(vim.tbl_keys(state.matchers), ''):gsub('[%]%%]', '%%%1')..']'
 
   local on_bytes = function(bufnr, tick, start_row, start_col, offset, old_end_row, old_end_col, old_len, end_row, end_col, len)
     -- sometimes there's no syntax/tree changes, but there are byte changes
     -- these can shift the positions of later brackets
     -- so we reparse in these cases
-    if state_table[bufnr] then
+    if state_table[bufnr] == state then
       local change = {
         start_row + math.min(0, end_row-old_end_row),
         start_col + math.min(0, end_col-old_end_col),
         start_row + math.max(0, end_row-old_end_row),
         start_col + math.max(0, end_col-old_end_col),
       }
-      table.insert(state_table[bufnr].byte_changes, change);
+      table.insert(state.byte_changes, change);
     else
       -- detach
       return true
@@ -405,8 +406,8 @@ function M.attach(bufnr, lang, config)
   if parser then
     parser:register_cbs({
       on_changedtree = function(changes, tree)
-        if state_table[bufnr] then
-          vim.list_extend(state_table[bufnr].changes, changes)
+        if state_table[bufnr] == state then
+          vim.list_extend(state.changes, changes)
         end
       end,
       on_bytes = on_bytes,
@@ -424,10 +425,9 @@ function M.attach(bufnr, lang, config)
   end
 
   vim.api.nvim_create_autocmd('BufReadPost', {buffer=bufnr, callback=function()
-    if state_table[bufnr] then
-      config = state_table[bufnr].config
+    if state_table[bufnr] == state then
       state_table[bufnr] = nil
-      M.attach(bufnr, nil, config)
+      M.attach(bufnr, nil, state.config)
     else
       -- detach
       return true
