@@ -42,15 +42,22 @@ function M.setup(opts)
   end
 end
 
+local function handle_buffer(bufnr, ft)
+  if config.enable and not config.enable(ft, bufnr) then
+    M.detach(bufnr)
+  else
+    M.attach(bufnr, ft, config)
+  end
+end
+
 function M.init()
   vim.api.nvim_create_autocmd('FileType', {callback=function(args)
     local ft = args.match
-    if config.enable and not config.enable(ft, args.buf) then
-      M.detach(args.buf)
-    else
-      M.attach(args.buf, ft, config)
-    end
+    handle_buffer(args.buf, ft)
   end})
+  for _, item in ipairs(vim.fn.getbufinfo{bufloaded=true}) do
+    handle_buffer(item.bufnr, vim.api.nvim_buf_get_option(item.bufnr, 'filetype'))
+  end
 end
 
 function M.get_matches(...)
