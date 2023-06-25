@@ -1,7 +1,6 @@
 local M = require('rainbow.constants')
 
 local config = {
-  max_file_lines = 9999999,
   highlight_middle = true,
   priority = 200,
   colors = {

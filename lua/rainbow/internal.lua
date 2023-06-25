@@ -400,12 +400,6 @@ function M.attach(bufnr, lang, config)
     return
   end
 
-  ---@diagnostic disable-next-line
-  if config.max_file_lines ~= nil and vim.api.nvim_buf_line_count(bufnr) > config.max_file_lines then
-    M.detach(bufnr)
-    return
-  end
-
   local parser = nil
   if not config.treesitter_enable or config.treesitter_enable(bufnr, lang) then
     if rainbow_query.get_query(lang) then
