@@ -24,7 +24,7 @@ local state_table = {}
 local CONSTANTS = require('rainbow.constants')
 
 local function get_lang(bufnr)
-  local ft = vim.api.nvim_buf_get_option(bufnr, 'filetype'):match('[^.]*')
+  local ft = vim.api.nvim_buf_get_option(bufnr, 'filetype')
   return vim.treesitter.language.get_lang(ft) or ft
 end
 
