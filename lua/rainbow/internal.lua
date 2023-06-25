@@ -232,11 +232,21 @@ local function get_treesitter_iterator(bufnr, tree, lang)
   end
 end
 
+local syn_name_cache = {}
+local function get_syn_name(bufnr, row, col)
+  local id = vim.api.nvim_buf_call(bufnr, function() return vim.fn.synID(row, col, 1) end)
+  if not syn_name_cache[id] then
+    syn_name_cache[id] = vim.fn.synIDattr(vim.fn.synIDtrans(id), 'name')
+  end
+  return syn_name_cache[id]
+end
+
 local function get_buffer_iterator(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local matchers = state_table[bufnr].matchers
   local pattern = state_table[bufnr].matchers_pattern
   local ignore_syntax = state_table[bufnr].config.ignore_syntax
+  local hl_cache = state_table[bufnr].hl_cache
   local row = 1
   local col = 1
 
@@ -247,11 +257,15 @@ local function get_buffer_iterator(bufnr)
       local start_col, end_col = line:find(pattern, col)
       if start_col then
         col = start_col + 1
-        local opt = matchers[line:sub(start_col, end_col)]
 
-        -- local attrs = vim.inspect_pos(bufnr, row-1, start_col-1, inspect_opts) -- too slow
-        local syntax = vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.synID(row, start_col, 1)), 'name')
-        if not ignore_syntax[syntax] then
+        if not hl_cache[row] then
+          hl_cache[row] = {}
+        end
+        if not hl_cache[row][start_col] then
+          hl_cache[row][start_col] = get_syn_name(bufnr, row, start_col)
+        end
+        if not ignore_syntax[hl_cache[row][start_col]] then
+          local opt = matchers[line:sub(start_col, end_col)]
           return opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col
         end
 
@@ -260,6 +274,22 @@ local function get_buffer_iterator(bufnr)
         col = 1
       end
     end
+  end
+end
+
+local function invalidate_hl_cache(bufnr, byte_changes)
+  local state = state_table[bufnr]
+  local maxline = vim.api.nvim_buf_line_count(bufnr)
+  for _, change in ipairs(byte_changes) do
+    -- invalidate everything after this change
+    for i = change[1]+1, maxline do
+      if state.hl_cache[i] then
+        for k, v in pairs(state.hl_cache[i]) do
+          state.hl_cache[i][k] = nil
+        end
+      end
+    end
+    maxline = change[1]
   end
 end
 
@@ -282,9 +312,8 @@ local function need_invalidate(bufnr)
         return true
       end
       -- if not treesitter, can't rely on tree changes
-      -- in this case check the patterns
-      -- if it is a delete, always invalidate; since we don't know what was deleted
-      if not state.parser and (change.delete or table.concat(vim.api.nvim_buf_get_text(bufnr, change[1], change[2], change[3], change[4], {}), '\n'):match(state.matchers_pattern)) then
+      -- so pretty much any change invalidates
+      if not state.parser and item then
         return true
       end
     end
@@ -304,11 +333,15 @@ local function update_buffer(bufnr, force)
 
   local state = state_table[bufnr]
   state.changes = {}
+  local byte_changes = state.byte_changes
   state.byte_changes = {}
   if not invalidate then
     return
   end
 
+  if not state.parser then
+    invalidate_hl_cache(bufnr, byte_changes)
+  end
   local num_trees = 0
   local pool = state.items or {}
 
@@ -388,6 +421,7 @@ function M.attach(bufnr, lang, config)
     parser = parser,
     enabled_langs = {},
     config = config,
+    hl_cache = {},
   }
   local state = state_table[bufnr]
 
