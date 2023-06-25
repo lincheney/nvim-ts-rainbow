@@ -1,16 +1,16 @@
 ; inherits: _square,_round,_curly,_comma
 
-(for_statement "for" @middle.for "in" @middle.for ":" @middle.for
-    (else_clause "else" @middle.for ":" @middle.for (#set! "jump" "true"))?
-) @scope.for
+(for_statement) @scope.for
+(for_statement "for" @middle.for (#set! "jump" "true") "in" @middle.for ":" @middle.for)
+(for_statement (else_clause "else" @middle.for (#set! "jump" "true") ":" @middle.for))
 
-(while_statement "while" @middle.while ":" @middle.while
-    (else_clause "else" @middle.while ":" @middle.while (#set! "jump" "true"))?
-) @scope.while
+(while_statement) @scope.while
+(while_statement "while" @middle.while (#set! "jump" "true") ":" @middle.while)
+(while_statement (else_clause "else" @middle.while (#set! "jump" "true") ":" @middle.while))
 
-(if_statement "if" @middle.if ":" @middle.if
-    (else_clause "else" @middle.if ":" @middle.if (#set! "jump" "true"))?
-) @scope.if
+(if_statement) @scope.if
+(if_statement "if" @middle.if (#set! "jump" "true") ":" @middle.if)
+(if_statement (else_clause "else" @middle.if (#set! "jump" "true") ":" @middle.if))
 (elif_clause "elif" @middle.if ":" @middle.if (#set! "jump" "true"))
 
 (with_statement "with" @middle.with ":" @middle.with) @scope.with
@@ -19,13 +19,13 @@
 
 (class_definition "class" @middle.class ":" @middle.class) @scope.class
 
-(try_statement "try" @middle.try ":" @middle.try
-    (except_clause "except" @middle.try ":" @middle.try (#set! "jump" "true"))?
-    ; (except_group_clause "except*" @middle.try ":" @middle.try)?
-    (else_clause "else" @middle.try ":" @middle.try (#set! "jump" "true"))?
-    (finally_clause "finally" @middle.try ":" @middle.try (#set! "jump" "true"))?
-) @scope.try
+(try_statement) @scope.try
+(try_statement "try" @middle.try (#set! "jump" "true") ":" @middle.try)
+(try_statement (except_clause "except" @middle.try (#set! "jump" "true") ":" @middle.try))
+; (except_group_clause "except*" @middle.try ":" @middle.try)?
+(try_statement (else_clause "else" @middle.try (#set! "jump" "true") ":" @middle.try))
+(try_statement (finally_clause "finally" @middle.try (#set! "jump" "true") ":" @middle.try))
 
-(match_statement "match" @middle.match ":" @middle.match
-    (case_clause "case" @middle.match ":" @middle.match (#set! "jump" "true"))?
-) @scope.match
+(match_statement) @scope.match
+(match_statement "match" @middle.match (#set! "jump" "true") ":" @middle.match)
+(match_statement (case_clause "case" @middle.match (#set! "jump" "true") ":" @middle.match))
