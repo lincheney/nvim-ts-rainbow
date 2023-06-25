@@ -175,8 +175,8 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
 
   end)
 
-  for _, scope in ipairs(scopes) do
-    table.insert(items, finish_scope(scope, pool))
+  for i = 0, #scopes-1 do
+    table.insert(items, finish_scope(scopes[#scopes-i], pool))
   end
 
   -- set the level of each bracket, starting from 0
