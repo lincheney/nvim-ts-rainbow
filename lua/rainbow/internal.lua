@@ -104,7 +104,7 @@ end
 --- @param tree table # Syntax tree
 --- @param lang string # Language
 --- @param pool of tables for reuse
-local function update_range(bufnr, iterator, pool, tree_num)
+local function parse_matches(bufnr, iterator, pool, tree_num)
   -- invalidate everything for now
   -- figure out how to do damage later
   local items = {}
@@ -193,7 +193,7 @@ local function update_range(bufnr, iterator, pool, tree_num)
   return items
 end
 
-local function update_tree_range(bufnr, tree, lang, pool, tree_num)
+local function get_treesitter_iterator(bufnr, tree, lang, pool, tree_num)
   if not lang then
     return
   end
@@ -209,7 +209,7 @@ local function update_tree_range(bufnr, tree, lang, pool, tree_num)
 
   local type_map = {left=CONSTANTS.LEFT, right=CONSTANTS.RIGHT, middle=CONSTANTS.MIDDLE, scope=CONSTANTS.SCOPE_LEFT}
   local iter, state, var = query:iter_captures(root, bufnr, 0, -1)
-  local iterator = function()
+  return function()
     while true do
       local id, node, metadata = iter(state, var)
       if id == nil then
@@ -230,11 +230,9 @@ local function update_tree_range(bufnr, tree, lang, pool, tree_num)
       end
     end
   end
-
-  return update_range(bufnr, iterator, pool, tree_num)
 end
 
-local function update_buffer_range(bufnr, pool, tree_num)
+local function get_buffer_iterator(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local matchers = state_table[bufnr].matchers
   local pattern = state_table[bufnr].matchers_pattern
@@ -243,7 +241,7 @@ local function update_buffer_range(bufnr, pool, tree_num)
   local col = 1
 
   -- local inspect_opts = {semantic_tokens=false, extmarks=false}
-  local iterator = function()
+  return function()
     while row <= #lines do
       local line = lines[row]
       local start_col, end_col = line:find(pattern, col)
@@ -263,8 +261,6 @@ local function update_buffer_range(bufnr, pool, tree_num)
       end
     end
   end
-
-  return update_range(bufnr, iterator, pool, tree_num)
 end
 
 local function need_invalidate(bufnr)
@@ -299,7 +295,7 @@ local function need_invalidate(bufnr)
   return false
 end
 
-local function update_all_trees(bufnr, force)
+local function update_buffer(bufnr, force)
   if vim.fn.pumvisible() ~= 0 then
     return
   end
@@ -326,16 +322,18 @@ local function update_all_trees(bufnr, force)
       end
 
       if state.enabled_langs[lang] then
-        local new_items = update_tree_range(bufnr, tree, lang, pool, num_trees)
-        if new_items then
+        local iterator = get_treesitter_iterator(bufnr, tree, lang)
+        if iterator then
+          local items = parse_matches(bufnr, iterator, pool, num_trees)
           num_trees = num_trees + 1
-          vim.list_extend(state.items, new_items)
+          vim.list_extend(state.items, items)
         end
       end
     end)
 
   else
-    state.items = update_buffer_range(bufnr, pool, num_trees)
+    local iterator = get_buffer_iterator(bufnr)
+    state.items = parse_matches(bufnr, iterator, pool, num_trees)
     num_trees = num_trees + 1
   end
 
@@ -467,7 +465,7 @@ local function on_line(_, win, bufnr, row)
     return
   end
 
-  update_all_trees(bufnr)
+  update_buffer(bufnr)
 
   local items = state_table[bufnr].items
   local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
