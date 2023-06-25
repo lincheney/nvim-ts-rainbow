@@ -247,24 +247,30 @@ local function get_buffer_iterator(bufnr)
   local pattern = state_table[bufnr].matchers_pattern
   local ignore_syntax = state_table[bufnr].config.ignore_syntax
   local hl_cache = state_table[bufnr].hl_cache
+  local calc_syntax = next(ignore_syntax)
   local row = 1
   local col = 1
 
-  -- local inspect_opts = {semantic_tokens=false, extmarks=false}
   return function()
+
     while row <= #lines do
       local line = lines[row]
       local start_col, end_col = line:find(pattern, col)
       if start_col then
         col = start_col + 1
+        local ignore = false
 
-        if not hl_cache[row] then
-          hl_cache[row] = {}
+        if calc_syntax then
+          if not hl_cache[row] then
+            hl_cache[row] = {}
+          end
+          if not hl_cache[row][start_col] then
+            hl_cache[row][start_col] = get_syn_name(bufnr, row, start_col)
+          end
+          ignore = ignore or ignore_syntax[hl_cache[row][start_col]]
         end
-        if not hl_cache[row][start_col] then
-          hl_cache[row][start_col] = get_syn_name(bufnr, row, start_col)
-        end
-        if not ignore_syntax[hl_cache[row][start_col]] then
+
+        if not ignore then
           local opt = matchers[line:sub(start_col, end_col)]
           return opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col
         end
@@ -304,16 +310,16 @@ local function need_invalidate(bufnr)
     -- tree changes
     return true
 
+  elseif not state.parser and #state.byte_changes > 0 then
+      -- if not treesitter, can't rely on tree changes
+      -- so pretty much any change invalidates
+      return true
+
   elseif #state.byte_changes > 0 and #state.items > 0 then
     -- we only care about byte changes if they make line changes OR we have brackets on the same row
     for _, change in ipairs(state.byte_changes) do
       local item = state.items[binsearch_items(state.items, {change[1], 0})]
       if item and (change[1] ~= change[3] or item.start[1] == change[1]) then
-        return true
-      end
-      -- if not treesitter, can't rely on tree changes
-      -- so pretty much any change invalidates
-      if not state.parser and item then
         return true
       end
     end
