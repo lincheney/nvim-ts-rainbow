@@ -35,6 +35,20 @@ local config = {
   end,
 }
 
+local started = false
+local function init()
+  if started then
+    return
+  end
+  started = true
+  vim.api.nvim_create_autocmd('FileType', {callback=function(args)
+    M.attach(args.buf)
+  end})
+  for _, item in ipairs(vim.fn.getbufinfo{bufloaded=true}) do
+    M.attach(item.bufnr)
+  end
+end
+
 function M.setup(opts)
   for k, v in pairs(opts) do
     config[k] = v
@@ -51,15 +65,7 @@ function M.setup(opts)
       config.ignore_syntax[v] = true
     end
   end
-end
-
-function M.init()
-  vim.api.nvim_create_autocmd('FileType', {callback=function(args)
-    M.attach(args.buf)
-  end})
-  for _, item in ipairs(vim.fn.getbufinfo{bufloaded=true}) do
-    M.attach(item.bufnr)
-  end
+  init()
 end
 
 function M.get_matches(...)
