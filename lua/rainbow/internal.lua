@@ -193,7 +193,7 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
   return items
 end
 
-local function get_treesitter_iterator(bufnr, tree, lang, pool, tree_num)
+local function get_treesitter_iterator(bufnr, tree, lang)
   if not lang then
     return
   end
