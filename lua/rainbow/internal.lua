@@ -89,7 +89,8 @@ local function finish_scope(scope, pool)
   scope_end.tree_num = scope.tree_num
   scope_end.kind = scope.kind
   scope_end.type = CONSTANTS.SCOPE_RIGHT
-  scope_end.matched = true
+  scope_end.matched = scope
+  scope.matched = scope_end
   if not scope_end.start then
     scope_end.start = {}
   end
