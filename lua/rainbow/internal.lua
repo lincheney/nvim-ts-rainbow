@@ -111,7 +111,7 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
   local stack = {}
   local scopes = {}
 
-  for type, kind, metadata, start_row, start_col, end_row, end_col in iterator do
+  iterator(function(type, kind, metadata, start_row, start_col, end_row, end_col)
     -- recycle tables from the pool
     local item = table.remove(pool) or {}
     item.type = type
@@ -169,7 +169,7 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
 
     end
 
-  end
+  end)
 
   for _, scope in ipairs(scopes) do
     table.insert(items, finish_scope(scope, pool))
@@ -208,15 +208,8 @@ local function get_treesitter_iterator(bufnr, tree, lang)
   local seen = {}
 
   local type_map = {left=CONSTANTS.LEFT, right=CONSTANTS.RIGHT, middle=CONSTANTS.MIDDLE, scope=CONSTANTS.SCOPE_LEFT}
-  local iter, state, var = query:iter_captures(root, bufnr, 0, -1)
-  return function()
-    while true do
-      local id, node, metadata = iter(state, var)
-      if id == nil then
-        return nil
-      end
-      var = id
-
+  return function(callback)
+    for id, node, metadata in query:iter_captures(root, bufnr, 0, -1) do
       if node:has_error() then
       elseif seen[node:id()] then
         -- skip nodes we have already processed
@@ -226,7 +219,7 @@ local function get_treesitter_iterator(bufnr, tree, lang)
         local name, kind = query.captures[id]:match('^([^.]*)%.(.*)$')
         local start_row, start_col = node:start()
         local end_row, end_col = node:end_()
-        return type_map[name], kind, metadata, start_row, start_col, end_row, end_col
+        callback(type_map[name], kind, metadata, start_row, start_col, end_row, end_col)
       end
     end
   end
@@ -241,7 +234,7 @@ local function get_syn_name(bufnr, row, col)
   return syn_name_cache[id]
 end
 
-local function get_buffer_iterator(bufnr)
+local function get_buffer_visible_syn_range(bufnr, offset)
   local state = state_table[bufnr]
 
   local bufinfo = vim.fn.getbufinfo(bufnr)[1]
@@ -257,21 +250,30 @@ local function get_buffer_iterator(bufnr)
       maxline = window.botline
     end
   end
-  local offset = state.config.syn_maxlines
+  local offset = offset or state.config.syn_maxlines
   minline = math.max(0, minline - offset - 1)
   maxline = math.min(bufinfo.linecount, maxline + offset)
+  return minline, maxline
+end
 
-  local lines = vim.api.nvim_buf_get_lines(bufnr, minline, maxline, false)
-  local calc_syntax = next(state.config.ignore_syntax)
-  local row = 1
-  local col = 1
+local function get_buffer_iterator(bufnr)
+  return function(callback)
 
-  return function()
+    local state = state_table[bufnr]
+    local minline, maxline = get_buffer_visible_syn_range(bufnr)
+    state.visible_syn_range = {minline, maxline}
+    local lines = vim.api.nvim_buf_get_lines(bufnr, minline, maxline, false)
+    local calc_syntax = next(state.config.ignore_syntax)
 
-    while row <= #lines do
-      local line = lines[row]
-      local start_col, end_col = line:find(state.matchers_pattern, col)
-      if start_col then
+    for row, line in ipairs(lines) do
+      local col = 1
+
+      while true do
+        local start_col, end_col = line:find(state.matchers_pattern, col)
+        if not start_col then
+          break
+        end
+
         local row = row + minline
         col = start_col + 1
         local ignore = false
@@ -288,14 +290,11 @@ local function get_buffer_iterator(bufnr)
 
         if not ignore then
           local opt = state.matchers[line:sub(start_col, end_col)]
-          return opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col
+          callback(opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col)
         end
-
-      else
-        row = row + 1
-        col = 1
       end
     end
+
   end
 end
 
@@ -326,10 +325,18 @@ local function need_invalidate(bufnr)
     -- tree changes
     return true
 
-  elseif not state.parser and #state.byte_changes > 0 then
+  elseif not state.parser then
+    if #state.byte_changes > 0 then
       -- if not treesitter, can't rely on tree changes
       -- so pretty much any change invalidates
       return true
+    end
+
+    -- invalidate if we have scrolled out of range
+    local minline, maxline = get_buffer_visible_syn_range(bufnr, 0)
+    if not state.visible_syn_range or minline < state.visible_syn_range[1] or state.visible_syn_range[2] < maxline then
+      return true
+    end
 
   elseif #state.byte_changes > 0 and #state.items > 0 then
     -- we only care about byte changes if they make line changes OR we have brackets on the same row
