@@ -13,6 +13,7 @@ local config = {
   enable = nil,
   treesitter_enable = nil,
   ignore_syntax = {Comment=true, String=true},
+  syn_maxlines = 500,
 
   matchers = {
     [''] = {
@@ -83,6 +84,13 @@ function M.detach(bufnr)
     bufnr = vim.api.nvim_get_current_buf()
   end
   return require('rainbow.internal').detach(bufnr)
+end
+
+function M.update(bufnr)
+  if bufnr == 0 then
+    bufnr = vim.api.nvim_get_current_buf()
+  end
+  return require('rainbow.internal').update(bufnr)
 end
 
 return M

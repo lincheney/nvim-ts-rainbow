@@ -234,7 +234,7 @@ end
 
 local syn_name_cache = {}
 local function get_syn_name(bufnr, row, col)
-  local id = vim.api.nvim_buf_call(bufnr, function() return vim.fn.synID(row, col, 1) end)
+  local id = vim.fn.synID(row, col, 1)
   if not syn_name_cache[id] then
     syn_name_cache[id] = vim.fn.synIDattr(vim.fn.synIDtrans(id), 'name')
   end
@@ -242,12 +242,27 @@ local function get_syn_name(bufnr, row, col)
 end
 
 local function get_buffer_iterator(bufnr)
-  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local matchers = state_table[bufnr].matchers
-  local pattern = state_table[bufnr].matchers_pattern
-  local ignore_syntax = state_table[bufnr].config.ignore_syntax
-  local hl_cache = state_table[bufnr].hl_cache
-  local calc_syntax = next(ignore_syntax)
+  local state = state_table[bufnr]
+
+  local bufinfo = vim.fn.getbufinfo(bufnr)[1]
+  local minline = math.huge
+  local maxline = 0
+
+  for _, winid in ipairs(bufinfo.windows) do
+    local window = vim.fn.getwininfo(winid)[1]
+    if window.topline < minline then
+      minline = window.topline
+    end
+    if window.botline > maxline then
+      maxline = window.botline
+    end
+  end
+  local offset = state.config.syn_maxlines
+  minline = math.max(0, minline - offset - 1)
+  maxline = math.min(bufinfo.linecount, maxline + offset)
+
+  local lines = vim.api.nvim_buf_get_lines(bufnr, minline, maxline, false)
+  local calc_syntax = next(state.config.ignore_syntax)
   local row = 1
   local col = 1
 
@@ -255,23 +270,24 @@ local function get_buffer_iterator(bufnr)
 
     while row <= #lines do
       local line = lines[row]
-      local start_col, end_col = line:find(pattern, col)
+      local start_col, end_col = line:find(state.matchers_pattern, col)
       if start_col then
+        local row = row + minline
         col = start_col + 1
         local ignore = false
 
         if calc_syntax then
-          if not hl_cache[row] then
-            hl_cache[row] = {}
+          if not state.hl_cache[row] then
+            state.hl_cache[row] = {}
           end
-          if not hl_cache[row][start_col] then
-            hl_cache[row][start_col] = get_syn_name(bufnr, row, start_col)
+          if not state.hl_cache[row][start_col] then
+            state.hl_cache[row][start_col] = get_syn_name(bufnr, row, start_col)
           end
-          ignore = ignore or ignore_syntax[hl_cache[row][start_col]]
+          ignore = ignore or state.config.ignore_syntax[state.hl_cache[row][start_col]]
         end
 
         if not ignore then
-          local opt = matchers[line:sub(start_col, end_col)]
+          local opt = state.matchers[line:sub(start_col, end_col)]
           return opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col
         end
 
@@ -330,8 +346,8 @@ local function need_invalidate(bufnr)
   return false
 end
 
-local function update_buffer(bufnr, force)
-  if vim.fn.pumvisible() ~= 0 then
+function M.update(bufnr, force)
+  if not state_table[bufnr] or vim.fn.pumvisible() ~= 0 then
     return
   end
 
@@ -371,9 +387,11 @@ local function update_buffer(bufnr, force)
     end)
 
   else
-    local iterator = get_buffer_iterator(bufnr)
-    state.items = parse_matches(bufnr, iterator, pool, num_trees)
-    num_trees = num_trees + 1
+    vim.api.nvim_buf_call(bufnr, function()
+      local iterator = get_buffer_iterator(bufnr)
+      state.items = parse_matches(bufnr, iterator, pool, num_trees)
+      num_trees = num_trees + 1
+    end)
   end
 
   -- don't need to sort if only 1 tree
@@ -499,7 +517,7 @@ local function on_line(_, win, bufnr, row)
     return
   end
 
-  update_buffer(bufnr)
+  M.update(bufnr)
 
   local items = state_table[bufnr].items
   local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
