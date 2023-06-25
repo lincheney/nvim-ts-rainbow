@@ -15,9 +15,9 @@
 
 ("if" @left.if (#set! "right" "\nfi"))
 (if_statement "then" @middle.if)
-"elif" @middle.if
+("elif" @middle.if (#set! "jump" "true"))
 (elif_clause "then" @middle.if)
-"else" @middle.if
+("else" @middle.if (#set! "jump" "true"))
 "fi" @right.if
 
 ("while" @left.block (#set! "right" "\ndone"))
@@ -29,7 +29,7 @@
 
 ("case" @left.case (#set! "right" "\nesac"))
 (case_statement "in" @middle.case)
-(case_item ")" @middle.case)
+(case_item ")" @middle.case (#set! "jump" "true"))
 "esac" @right.case
 
 ; do it after the case

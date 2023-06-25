@@ -120,7 +120,7 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
     item.matched = false
     item.level = nil
     item.hl = nil
-    item.right = nil
+    item.metadata = metadata and next(metadata) and metadata or nil
     if not item.start then
       item.start = {}
     end
@@ -139,7 +139,6 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
 
     if type == CONSTANTS.LEFT then
       -- add to stack
-      item.right = metadata.right
       table.insert(stack, item)
       table.insert(items, item)
 

@@ -6,8 +6,8 @@
 "do" @middle.block
 ("if" @left.block (#set! "right" "\nend"))
 "then" @middle.block
-"elseif" @middle.block
-"else" @middle.block
+("elseif" @middle.block (#set! "jump" "true"))
+("else" @middle.block (#set! "jump" "true"))
 "end" @right.block
 ("repeat" @left.repeat-until (#set! "right" "\nuntil"))
 "until" @right.repeat-until
