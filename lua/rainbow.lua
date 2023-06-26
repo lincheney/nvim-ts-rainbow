@@ -54,10 +54,12 @@ function M.setup(opts)
     config[k] = v
   end
   if type(config.enable) == 'table' then
-    config.enable = function(buf, ft) return vim.tbl_contains(config.enable, ft) end
+    local enable = config.enable
+    config.enable = function(buf, ft) return vim.tbl_contains(enable, ft) end
   end
   if type(config.treesitter_enable) == 'table' then
-    config.treesitter_enable = function(buf, ft) return vim.tbl_contains(config.treesitter_enable, ft) end
+    local treesitter_enable = config.treesitter_enable
+    config.treesitter_enable = function(buf, ft) return vim.tbl_contains(treesitter_enable, ft) end
   end
   if #config.ignore_syntax > 0 then
     for k, v in ipairs(config.ignore_syntax) do
