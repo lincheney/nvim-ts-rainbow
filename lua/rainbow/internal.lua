@@ -149,13 +149,13 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
 
     elseif type == CONSTANTS.RIGHT then
       -- find a matching opening bracket
-      for i = 0, #stack-1 do
-        local x = stack[#stack-i]
+      for i = #stack, 1, -1 do
+        local x = stack[i]
         if x.kind == kind then
           x.matched = item
           item.matched = x
           -- pop off the stack
-          for j = #stack-i, #stack do
+          for j = i, #stack do
             stack[j] = nil
           end
           break
@@ -175,8 +175,8 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
 
   end)
 
-  for i = 0, #scopes-1 do
-    table.insert(items, finish_scope(scopes[#scopes-i], pool))
+  for i = #scopes, 1, -1 do
+    table.insert(items, finish_scope(scopes[i], pool))
   end
 
   -- set the level of each bracket, starting from 0
