@@ -74,6 +74,10 @@ function M.get_matches(...)
   return require('rainbow.internal').get_matches(...)
 end
 
+function M.get_matches_at_pos(...)
+  return require('rainbow.internal').get_matches_at_pos(...)
+end
+
 function M.attach(bufnr)
   if bufnr == 0 then
     bufnr = vim.api.nvim_get_current_buf()

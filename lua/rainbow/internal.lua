@@ -123,6 +123,7 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
     item.type = type
     item.tree_num = tree_num
     item.kind = kind
+    item.parent = nil
     item.matched = false
     item.level = nil
     item.hl = nil
@@ -180,18 +181,27 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
     table.insert(items, finish_scope(scopes[i], pool))
   end
 
+  -- clear stack
+  for i = #stack, 1, -1 do
+    stack[i] = nil
+  end
+
   -- set the level of each bracket, starting from 0
   local level = 0
   for _, item in ipairs(items) do
+    item.parent = stack[#stack]
     if item.type == CONSTANTS.MIDDLE then -- TODO currently we do not check for the kind for middle nodes
       item.level = level
     elseif item.matched then
       if item.type == CONSTANTS.LEFT or item.type == CONSTANTS.SCOPE_LEFT then
         level = level + 1
         item.level = level
+        stack[#stack+1] = item
       elseif item.type == CONSTANTS.RIGHT or item.type == CONSTANTS.SCOPE_RIGHT then
         item.level = level
+        item.parent = item.matched.parent
         level = level - 1
+        stack[#stack] = nil
       end
     end
   end
@@ -579,6 +589,21 @@ function M.get_matches(bufnr, start, finish)
   local start, finish = get_items_in_range(items, start, finish)
 
   return vim.list_slice(items, start, finish-1)
+end
+
+function M.get_matches_at_pos(bufnr, pos)
+  if not bufnr or bufnr == 0 then
+    bufnr = vim.api.nvim_get_current_buf()
+  end
+  local items = state_table[bufnr].items
+  local idx = binsearch_items(items, pos)
+  local matches = {}
+  for i = idx, #items do
+    if tuple_cmp(items[i].start, pos) <= 0 and tuple_cmp(pos, items[i].finish) <= 0 then
+      table.insert(matches, items[i])
+    end
+  end
+  return matches
 end
 
 return M
