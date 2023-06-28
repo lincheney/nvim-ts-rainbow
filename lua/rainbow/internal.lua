@@ -74,11 +74,12 @@ local function binsearch_items(items, target, start)
 end
 
 local function get_items_in_range(items, start, finish)
+  -- end inclusive
   local i = binsearch_items(items, start)
   local j = binsearch_items(items, finish, i)
-  if j <= #items and tuple_cmp(finish, items[j].start) >= 0 then
-    -- get one past the finish
-    j = j + 1
+  while items[j-1] and tuple_cmp(finish, items[j-1].start) <= 0 do
+    -- this is on the finish, so go back one
+    j = j - 1
   end
   return i, j
 end
