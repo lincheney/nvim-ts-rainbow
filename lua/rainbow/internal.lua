@@ -242,11 +242,15 @@ end
 
 local syn_name_cache = {}
 local function get_syn_name(bufnr, row, col)
-  local id = vim.fn.synID(row, col, 1)
-  if not syn_name_cache[id] then
-    syn_name_cache[id] = vim.fn.synIDattr(vim.fn.synIDtrans(id), 'name')
+  local names = {}
+  for _, id in ipairs(vim.fn.synstack(row, col)) do
+    syn_name_cache[id] = syn_name_cache[id] or vim.fn.synIDattr(id, 'name')
+    table.insert(names, syn_name_cache[id])
+    id = vim.fn.synIDtrans(id)
+    syn_name_cache[id] = syn_name_cache[id] or vim.fn.synIDattr(id, 'name')
+    table.insert(names, syn_name_cache[id])
   end
-  return syn_name_cache[id]
+  return names
 end
 
 local function get_buffer_visible_syn_range(bufnr, offset)
@@ -300,7 +304,13 @@ local function get_buffer_iterator(bufnr)
           if not state.hl_cache[row][start_col] then
             state.hl_cache[row][start_col] = get_syn_name(bufnr, row, start_col)
           end
-          ignore = ignore or state.config.ignore_syntax[state.hl_cache[row][start_col]]
+
+          for _, name in ipairs(state.hl_cache[row][start_col]) do
+            if state.config.ignore_syntax[name] then
+              ignore = true
+              break
+            end
+          end
         end
 
         if not ignore then
