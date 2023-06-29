@@ -12,7 +12,7 @@ local config = {
   unmatched_color = 'RainbowColUnmatched',
   enable = nil,
   treesitter_enable = nil,
-  ignore_syntax = {Comment=true, String=true},
+  ignore_syntax = {Comment=true, String=true, shSnglCase=true},
   syn_maxlines = 500,
 
   matchers = {
