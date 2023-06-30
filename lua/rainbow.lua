@@ -70,33 +70,22 @@ function M.setup(opts)
   init()
 end
 
-function M.get_matches(...)
-  return require('rainbow.internal').get_matches(...)
+local function wrapper(name)
+  return function(bufnr, ...)
+    if bufnr == 0 then
+      bufnr = vim.api.nvim_get_current_buf()
+    end
+    return require('rainbow.internal')[name](bufnr, ...)
+  end
 end
 
-function M.get_matches_at_pos(...)
-  return require('rainbow.internal').get_matches_at_pos(...)
-end
-
+M.get_matches = wrapper('get_matches')
+M.get_matches_at_pos = wrapper('get_matches_at_pos')
+local attach = wrapper('attach')
 function M.attach(bufnr)
-  if bufnr == 0 then
-    bufnr = vim.api.nvim_get_current_buf()
-  end
-  return require('rainbow.internal').attach(bufnr, nil, config)
+  return attach(bufnr, nil, config)
 end
-
-function M.detach(bufnr)
-  if bufnr == 0 then
-    bufnr = vim.api.nvim_get_current_buf()
-  end
-  return require('rainbow.internal').detach(bufnr)
-end
-
-function M.update(bufnr)
-  if bufnr == 0 then
-    bufnr = vim.api.nvim_get_current_buf()
-  end
-  return require('rainbow.internal').update(bufnr)
-end
+M.detach = wrapper('detach')
+M.update = wrapper('update')
 
 return M
