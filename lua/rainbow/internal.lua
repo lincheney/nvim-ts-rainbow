@@ -589,8 +589,8 @@ vim.api.nvim_set_decoration_provider(nsid, {
 })
 
 function M.get_matches(bufnr, start, finish)
-  if not bufnr or bufnr == 0 then
-    bufnr = vim.api.nvim_get_current_buf()
+  if not state_table[bufnr] then
+    return
   end
   local start = start or {-1, math.huge}
   local finish = finish or {math.huge, math.huge}
@@ -601,8 +601,8 @@ function M.get_matches(bufnr, start, finish)
 end
 
 function M.get_matches_at_pos(bufnr, pos)
-  if not bufnr or bufnr == 0 then
-    bufnr = vim.api.nvim_get_current_buf()
+  if not state_table[bufnr] then
+    return
   end
   local items = state_table[bufnr].items
   local idx = binsearch_items(items, pos)
