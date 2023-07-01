@@ -243,13 +243,12 @@ end
 local syn_name_cache = {}
 local function get_syn_name(bufnr, row, col)
   local names = {}
-  for _, id in ipairs(vim.fn.synstack(row, col)) do
-    syn_name_cache[id] = syn_name_cache[id] or vim.fn.synIDattr(id, 'name')
-    table.insert(names, syn_name_cache[id])
-    id = vim.fn.synIDtrans(id)
-    syn_name_cache[id] = syn_name_cache[id] or vim.fn.synIDattr(id, 'name')
-    table.insert(names, syn_name_cache[id])
-  end
+  local id = vim.fn.synID(row, col, 0)
+  syn_name_cache[id] = syn_name_cache[id] or vim.fn.synIDattr(id, 'name')
+  table.insert(names, syn_name_cache[id])
+  id = vim.fn.synIDtrans(id)
+  syn_name_cache[id] = syn_name_cache[id] or vim.fn.synIDattr(id, 'name')
+  table.insert(names, syn_name_cache[id])
   return names
 end
 
