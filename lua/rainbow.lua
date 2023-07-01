@@ -72,7 +72,7 @@ end
 
 local function wrapper(name)
   return function(bufnr, ...)
-    if bufnr == 0 then
+    if not bufnr or bufnr == 0 then
       bufnr = vim.api.nvim_get_current_buf()
     end
     return require('rainbow.internal')[name](bufnr, ...)
