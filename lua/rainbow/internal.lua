@@ -240,104 +240,6 @@ local function get_treesitter_iterator(bufnr, tree, lang)
   end
 end
 
-local syn_name_cache = {}
-local function get_syn_name(bufnr, row, col)
-  local names = {}
-  local id = vim.fn.synID(row, col, 0)
-  syn_name_cache[id] = syn_name_cache[id] or vim.fn.synIDattr(id, 'name')
-  table.insert(names, syn_name_cache[id])
-  id = vim.fn.synIDtrans(id)
-  syn_name_cache[id] = syn_name_cache[id] or vim.fn.synIDattr(id, 'name')
-  table.insert(names, syn_name_cache[id])
-  return names
-end
-
-local function get_buffer_visible_syn_range(bufnr, offset)
-  local state = state_table[bufnr]
-
-  local bufinfo = vim.fn.getbufinfo(bufnr)[1]
-  local minline = math.huge
-  local maxline = 0
-
-  for _, winid in ipairs(bufinfo.windows) do
-    local window = vim.fn.getwininfo(winid)[1]
-    if window.topline < minline then
-      minline = window.topline
-    end
-    if window.botline > maxline then
-      maxline = window.botline
-    end
-  end
-  local offset = offset or state.config.syn_maxlines
-  minline = math.max(0, minline - offset - 1)
-  maxline = math.min(bufinfo.linecount, maxline + offset)
-  return minline, maxline
-end
-
-local function get_buffer_iterator(bufnr)
-  return function(callback)
-
-    local state = state_table[bufnr]
-    local minline, maxline = get_buffer_visible_syn_range(bufnr)
-    state.visible_syn_range = {minline, maxline}
-    local lines = vim.api.nvim_buf_get_lines(bufnr, minline, maxline, false)
-    local calc_syntax = next(state.config.ignore_syntax)
-
-    for row, line in ipairs(lines) do
-      local col = 1
-
-      while true do
-        local start_col, end_col = line:find(state.matchers_pattern, col)
-        if not start_col then
-          break
-        end
-
-        local row = row + minline
-        col = start_col + 1
-        local ignore = false
-
-        if calc_syntax then
-          if not state.hl_cache[row] then
-            state.hl_cache[row] = {}
-          end
-          if not state.hl_cache[row][start_col] then
-            state.hl_cache[row][start_col] = get_syn_name(bufnr, row, start_col)
-          end
-
-          for _, name in ipairs(state.hl_cache[row][start_col]) do
-            if state.config.ignore_syntax[name] then
-              ignore = true
-              break
-            end
-          end
-        end
-
-        if not ignore then
-          local opt = state.matchers[line:sub(start_col, end_col)]
-          callback(opt[1], opt[2], opt[3], row-1, start_col-1, row-1, end_col)
-        end
-      end
-    end
-
-  end
-end
-
-local function invalidate_hl_cache(bufnr, byte_changes)
-  local state = state_table[bufnr]
-  local maxline = vim.api.nvim_buf_line_count(bufnr)
-  for _, change in ipairs(byte_changes) do
-    -- invalidate everything after this change
-    for i = change[1]+1, maxline do
-      if state.hl_cache[i] then
-        for k, v in pairs(state.hl_cache[i]) do
-          state.hl_cache[i][k] = nil
-        end
-      end
-    end
-    maxline = change[1]
-  end
-end
-
 local function need_invalidate(bufnr)
   local state = state_table[bufnr]
 
@@ -348,19 +250,6 @@ local function need_invalidate(bufnr)
   elseif #state.changes > 0 then
     -- tree changes
     return true
-
-  elseif not state.parser then
-    if #state.byte_changes > 0 then
-      -- if not treesitter, can't rely on tree changes
-      -- so pretty much any change invalidates
-      return true
-    end
-
-    -- invalidate if we have scrolled out of range
-    local minline, maxline = get_buffer_visible_syn_range(bufnr, 0)
-    if not state.visible_syn_range or minline < state.visible_syn_range[1] or state.visible_syn_range[2] < maxline then
-      return true
-    end
 
   elseif #state.byte_changes > 0 and #state.items > 0 then
     -- we only care about byte changes if they make line changes OR we have brackets on the same row
@@ -386,44 +275,24 @@ function M.update(bufnr, force)
 
   local state = state_table[bufnr]
   state.changes = {}
-  local byte_changes = state.byte_changes
   state.byte_changes = {}
   if not invalidate then
     return
   end
 
-  if not state.parser then
-    invalidate_hl_cache(bufnr, byte_changes)
-  end
   local num_trees = 0
   local pool = state.items or {}
 
-  if state.parser then
-    local lang = get_lang(bufnr)
-    state.items = {}
-    state.parser:for_each_tree(function(tree, sub_parser)
-      local lang = sub_parser:lang()
-      if state.enabled_langs[lang] == nil then
-        state.enabled_langs[lang] = not state.config.treesitter_enable or state.config.treesitter_enable(lang, bufnr)
-      end
-
-      if state.enabled_langs[lang] then
-        local iterator = get_treesitter_iterator(bufnr, tree, lang)
-        if iterator then
-          local items = parse_matches(bufnr, iterator, pool, num_trees)
-          num_trees = num_trees + 1
-          vim.list_extend(state.items, items)
-        end
-      end
-    end)
-
-  else
-    vim.api.nvim_buf_call(bufnr, function()
-      local iterator = get_buffer_iterator(bufnr)
-      state.items = parse_matches(bufnr, iterator, pool, num_trees)
+  state.items = {}
+  state.parser:for_each_tree(function(tree, sub_parser)
+    local lang = sub_parser:lang()
+    local iterator = get_treesitter_iterator(bufnr, tree, lang)
+    if iterator then
+      local items = parse_matches(bufnr, iterator, pool, num_trees)
       num_trees = num_trees + 1
-    end)
-  end
+      vim.list_extend(state.items, items)
+    end
+  end)
 
   -- don't need to sort if only 1 tree
   if num_trees > 1 then
@@ -455,30 +324,22 @@ function M.attach(bufnr, lang, config)
     return
   end
 
-  local parser = nil
-  if not config.treesitter_enable or config.treesitter_enable(bufnr, lang) then
-    if rainbow_query.get_query(lang) then
-      parser = get_parser(bufnr, lang)
-    end
+  if not rainbow_query.get_query(lang) then
+    M.detach(bufnr)
+    return
   end
 
+  local parser = get_parser(bufnr, lang)
   state_table[bufnr] = {
     lang = lang,
     changes = {},
     byte_changes = {},
     items = nil,
     parser = parser,
-    enabled_langs = {},
     config = config,
     hl_cache = {},
   }
   local state = state_table[bufnr]
-
-  state.matchers = config.matchers[lang] or config.matchers['']
-  if config.additional_matchers[lang] then
-    state.matchers = {table.unpack(config.matchers), table.unpack(config.additional_matchers[lang])}
-  end
-  state.matchers_pattern = '['..table.concat(vim.tbl_keys(state.matchers), ''):gsub('[%]%%]', '%%%1')..']'
 
   local on_bytes = function(bufnr, tick, start_row, start_col, offset, old_end_row, old_end_col, old_len, end_row, end_col, len)
     -- sometimes there's no syntax/tree changes, but there are byte changes

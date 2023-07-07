@@ -11,22 +11,6 @@ local config = {
   },
   unmatched_color = 'RainbowColUnmatched',
   enable = nil,
-  treesitter_enable = nil,
-  ignore_syntax = {Comment=true, String=true, shSnglCase=true},
-  syn_maxlines = 500,
-
-  matchers = {
-    [''] = {
-      ['('] = {M.LEFT, 'round', {right=')'}},
-      [')'] = {M.RIGHT, 'round'},
-      ['['] = {M.LEFT, 'square', {right=']'}},
-      [']'] = {M.RIGHT, 'square'},
-      ['{'] = {M.LEFT, 'curly', {right='}'}},
-      ['}'] = {M.RIGHT, 'curly'},
-      [','] = {M.MIDDLE, 'comma'},
-    }
-  },
-  additional_matchers = {},
 
   -- treesitter things
   module_path = 'rainbow.internal',
@@ -56,16 +40,6 @@ function M.setup(opts)
   if type(config.enable) == 'table' then
     local enable = config.enable
     config.enable = function(buf, ft) return vim.tbl_contains(enable, ft) end
-  end
-  if type(config.treesitter_enable) == 'table' then
-    local treesitter_enable = config.treesitter_enable
-    config.treesitter_enable = function(buf, ft) return vim.tbl_contains(treesitter_enable, ft) end
-  end
-  if #config.ignore_syntax > 0 then
-    for k, v in ipairs(config.ignore_syntax) do
-      config.ignore_syntax[k] = nil
-      config.ignore_syntax[v] = true
-    end
   end
   init()
 end
