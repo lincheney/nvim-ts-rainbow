@@ -313,7 +313,7 @@ end
 function M.attach(bufnr, lang, config)
   if state_table[bufnr] then
     if state_table[bufnr].lang == lang then
-      return
+      return true
     end
     M.detach(bufnr)
   end
@@ -321,12 +321,12 @@ function M.attach(bufnr, lang, config)
 
   if config.enable and not config.enable(bufnr, lang) then
     M.detach(bufnr)
-    return
+    return false
   end
 
   if not rainbow_query.get_query(lang) then
     M.detach(bufnr)
-    return
+    return false
   end
 
   local parser = get_parser(bufnr, lang)
@@ -377,7 +377,7 @@ function M.attach(bufnr, lang, config)
     if not attached then
       -- failed attaching
       state_table[bufnr] = nil
-      return
+      return false
     end
   end
 
@@ -391,6 +391,7 @@ function M.attach(bufnr, lang, config)
     end
   end})
 
+  return true
 end
 
 --- Detach module from buffer. Called when `:TSBufDisable rainbow`.
