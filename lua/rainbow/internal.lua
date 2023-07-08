@@ -311,13 +311,13 @@ end
 --- @param bufnr number # Buffer number
 --- @param lang string # Buffer language
 function M.attach(bufnr, lang, config)
+  lang = lang or get_lang(bufnr)
   if state_table[bufnr] then
     if state_table[bufnr].lang == lang then
       return true
     end
     M.detach(bufnr)
   end
-  lang = lang or get_lang(bufnr)
 
   if config.enable and not config.enable(bufnr, lang) then
     M.detach(bufnr)
