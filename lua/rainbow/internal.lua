@@ -324,12 +324,12 @@ function M.attach(bufnr, lang, config)
     return false
   end
 
-  if not rainbow_query.get_query(lang) then
+  local parser = get_parser(bufnr, lang)
+  if not parser or not rainbow_query.get_query(lang) then
     M.detach(bufnr)
     return false
   end
 
-  local parser = get_parser(bufnr, lang)
   state_table[bufnr] = {
     lang = lang,
     changes = {},
