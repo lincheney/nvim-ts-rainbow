@@ -360,26 +360,14 @@ function M.attach(bufnr, lang, config)
     end
   end
 
-  if parser then
-    parser:register_cbs({
-      on_changedtree = function(changes, tree)
-        if state_table[bufnr] == state then
-          vim.list_extend(state.changes, changes)
-        end
-      end,
-      on_bytes = on_bytes,
-    })
-  else
-    local attached = vim.api.nvim_buf_attach(bufnr, false, {
-      on_bytes = function(_bytes, ...) return on_bytes(...) end,
-      on_detach = function(_detach, bufnr) M.detach(bufnr) end,
-    })
-    if not attached then
-      -- failed attaching
-      state_table[bufnr] = nil
-      return false
-    end
-  end
+  parser:register_cbs({
+    on_changedtree = function(changes, tree)
+      if state_table[bufnr] == state then
+        vim.list_extend(state.changes, changes)
+      end
+    end,
+    on_bytes = on_bytes,
+  })
 
   vim.api.nvim_create_autocmd('BufReadPost', {buffer=bufnr, callback=function()
     if state_table[bufnr] == state then
