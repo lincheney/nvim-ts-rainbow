@@ -28,4 +28,4 @@
 
 (match_statement) @scope.match
 (match_statement "match" @middle.match (#set! "jump" "true") ":" @middle.match)
-(match_statement (case_clause "case" @middle.match (#set! "jump" "true") ":" @middle.match))
+(match_statement (block (case_clause "case" @middle.match (#set! "jump" "true") ":" @middle.match)))
