@@ -1,5 +1,7 @@
 ; inherits: _square,_round,_curly,_comma
 
+(interpolation) @scope.interpolation
+
 (for_statement) @scope.for
 (for_statement "for" @middle.for (#set! "jump" "true") "in" @middle.for ":" @middle.for)
 (for_statement (else_clause "else" @middle.for (#set! "jump" "true") ":" @middle.for))
