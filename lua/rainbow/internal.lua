@@ -430,9 +430,7 @@ vim.api.nvim_set_decoration_provider(nsid, {
   end,
   on_line = on_line,
   on_buf = function(_, bufnr)
-    -- if we are using treesitter highlighting, it will do this for us
-    -- otherwise, we have to do it
-    if state_table[bufnr] and state_table[bufnr].parser and not vim.treesitter.highlighter.active[bufnr] then
+    if state_table[bufnr] and state_table[bufnr].parser then
       state_table[bufnr].parser:parse()
     end
   end,
