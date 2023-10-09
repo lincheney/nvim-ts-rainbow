@@ -65,6 +65,13 @@ local function binsearch_items(items, target, start)
     if cmp < 0 then
       finish = mid - 1
     elseif cmp == 0 or tuple_cmp(target, items[mid].finish) < 0 then
+      -- there may be more that match, find the first one
+      for i = mid-1, start, -1 do
+        if tuple_cmp(target, items[i].start) < 0 or tuple_cmp(target, items[i].finish) >= 0 then
+          break
+        end
+        mid = i
+      end
       return mid, true
     else
       start = mid + 1
