@@ -232,8 +232,7 @@ local function get_treesitter_iterator(bufnr, tree, lang)
   local type_map = {left=CONSTANTS.LEFT, right=CONSTANTS.RIGHT, middle=CONSTANTS.MIDDLE, scope=CONSTANTS.SCOPE_LEFT}
   return function(callback)
     for id, node, metadata in query:iter_captures(root, bufnr, 0, -1) do
-      if node:has_error() then
-      elseif seen[node:id()] then
+      if seen[node:id()] then
         -- skip nodes we have already processed
         -- this can happen if a node is captured multiple times
       else
@@ -411,7 +410,7 @@ local function on_line(_, win, bufnr, row)
   local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
   for i = start, finish-1 do
     local item = items[i]
-    if item.type ~= CONSTANTS.MIDDLE or (item.level and config.highlight_middle) then
+    if (item.type ~= CONSTANTS.MIDDLE or (item.level and config.highlight_middle)) and not (item.metadata and item.metadata.no_highlight) then
 
       if not item.hl then
         item.hl = config.unmatched_color
