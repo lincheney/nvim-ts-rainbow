@@ -9,6 +9,25 @@
 
 (_
   . (start_tag
+        (tag_name) @skip.tag_name (#not-any-of? @skip.tag_name
+            "area"
+            "base"
+            "br"
+            "col"
+            "embed"
+            "hr"
+            "img"
+            "input"
+            "link"
+            "meta"
+            "param"
+            "source"
+            "track"
+            "wbr"
+        )
+) @left.erroneous_start_tag )
+(_
+  . (start_tag
       "<" @middle.angle
         (tag_name) @middle.tag_name (#any-of? @middle.tag_name
             "area"
@@ -29,25 +48,6 @@
       ">" @middle.angle
   ) @scope.void_element
 )
-(_
-  . (start_tag
-        (tag_name) @skip.tag_name (#not-any-of? @skip.tag_name
-            "area"
-            "base"
-            "br"
-            "col"
-            "embed"
-            "hr"
-            "img"
-            "input"
-            "link"
-            "meta"
-            "param"
-            "source"
-            "track"
-            "wbr"
-        )
-) @left.erroneous_start_tag )
 
 (self_closing_tag
   "<" @middle.angle
