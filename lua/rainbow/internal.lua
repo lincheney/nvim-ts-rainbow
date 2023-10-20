@@ -232,7 +232,7 @@ local function get_treesitter_iterator(bufnr, tree, lang)
   local type_map = {left=CONSTANTS.LEFT, right=CONSTANTS.RIGHT, middle=CONSTANTS.MIDDLE, scope=CONSTANTS.SCOPE_LEFT}
   return function(callback)
     for id, node, metadata in query:iter_captures(root, bufnr, 0, -1) do
-      if node:has_error() then
+      if node:missing() then
       elseif seen[node:id()] then
         -- skip nodes we have already processed
         -- this can happen if a node is captured multiple times
