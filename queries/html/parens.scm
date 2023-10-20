@@ -1,7 +1,7 @@
 (_
   . (start_tag
       "<" @middle.angle
-      (tag_name) @middle.tag_name (#set! "jump" "true")
+      (tag_name) @middle.tag_name
       ">" @middle.angle
   ) @left.tag (#set! "no_highlight" "true")
   (end_tag) @right.tag
