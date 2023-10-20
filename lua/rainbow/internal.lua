@@ -407,6 +407,7 @@ local function on_line(_, win, bufnr, row)
 
   M.update(bufnr)
 
+  local lang = state_table[bufnr].lang
   local items = state_table[bufnr].items
   local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
   for i = start, finish-1 do
@@ -417,6 +418,9 @@ local function on_line(_, win, bufnr, row)
         item.hl = config.unmatched_color
         if item.matched or item.type == CONSTANTS.MIDDLE then
           item.hl = config.colors[(item.level-1) % #config.colors + 1]
+        end
+        if item.hl:sub(1, 1) == '@' then
+          item.hl = item.hl .. '.' .. lang
         end
       end
 
