@@ -6,6 +6,7 @@
 "]]" @right.square.double
 
 ("((" @left.round.double (#set! "right" "))"))
+("$((" @left.round.double (#set! "right" "))"))
 "))" @right.round.double
 
 ("$(" @left.round (#set! "right" ")"))
