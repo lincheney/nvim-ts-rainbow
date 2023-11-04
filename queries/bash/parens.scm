@@ -39,6 +39,7 @@
 ("case" @left.case (#set! "right" " in"))
 (case_statement "in" @middle.case)
 (case_item ")" @middle.case (#set! "jump" "true"))
+(case_item [";;" ";&" ";;&"] @middle.case)
 "esac" @right.case
 
 ; do it after the case
