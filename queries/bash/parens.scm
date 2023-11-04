@@ -14,21 +14,29 @@
 (">(" @left.round (#set! "right" ")"))
 ("${" @left.curly (#set! "right" "}"))
 
-("if" @left.if (#set! "right" "\nfi"))
+("if" @left.if (#set! "right" "\nfi") "then")
+("if" @left.if (#set! "right" "; then"))
 (if_statement "then" @middle.if)
 ("elif" @middle.if (#set! "jump" "true"))
 (elif_clause "then" @middle.if)
 ("else" @middle.if (#set! "jump" "true"))
 "fi" @right.if
 
-("while" @left.block (#set! "right" "\ndone"))
-("until" @left.block (#set! "right" "\ndone"))
-("for" @left.block (#set! "right" "\ndone"))
+("if" @left.if (#set! "right" "\nfi") "then")
+("if" @left.if (#set! "right" " then"))
+
+("while" @left.block (#set! "right" "\ndone") (do_group "do"))
+("while" @left.block (#set! "right" "; do"))
+("until" @left.block (#set! "right" "\ndone") (do_group "do"))
+("until" @left.block (#set! "right" "; do"))
+("for" @left.block (#set! "right" "\ndone") (do_group "do"))
+("for" @left.block (#set! "right" "; do"))
 (for_statement "in" @middle.block)
 (do_group "do" @middle.block)
 "done" @right.block
 
-("case" @left.case (#set! "right" "\nesac"))
+(ERROR ("case" @left.case (#set! "right" "\nesac")) ("in" @in (#eq? @in "in") ))
+("case" @left.case (#set! "right" " in"))
 (case_statement "in" @middle.case)
 (case_item ")" @middle.case (#set! "jump" "true"))
 "esac" @right.case
