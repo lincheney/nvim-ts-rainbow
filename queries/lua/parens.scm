@@ -1,6 +1,7 @@
 ; inherits: _square,_round,_curly,_comma
 ("function" @left.block (#set! "right" "\nend"))
 
+(do_statement "do" @left.block (#set! "right" "\nend"))
 "do" @middle.block
 "then" @middle.block
 
@@ -9,8 +10,6 @@
 
 (ERROR ("for" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
 ("for" @left.block (#set! "right" " do"))
-
-(do_statement "do" @left.block (#set! "right" "\nend"))
 
 (ERROR ("if" @left.block (#set! "right" "\nend")) ("then" @then (#eq? @then "then") ))
 ("if" @left.block (#set! "right" " then"))
