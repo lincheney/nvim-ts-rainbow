@@ -15,7 +15,7 @@
 ("${" @left.curly (#set! "right" "}"))
 
 ("if" @left.if (#set! "right" "\nfi") "then")
-(ERROR ("if" @left.if (#set! "right" " then")) ([";" ";;" "&"] @term (#lua-match? @term ".")) . )
+(ERROR ("if" @left.if (#set! "right" " then")) ([";" ";;" "&"] @term (#lua-match? @term ".")) )
 ("if" @left.if (#set! "right" ";"))
 (if_statement "then" @middle.if)
 ("elif" @middle.if (#set! "jump" "true"))
@@ -27,7 +27,7 @@
 ("if" @left.if (#set! "right" " then"))
 
 (["while" "until" "for"] @left.block (#set! "right" "\ndone") (do_group "do"))
-(ERROR (["while" "until" "for"] @left.block (#set! "right" " do")) ([";" ";;" "&"] @term (#lua-match? @term ".")) . )
+(ERROR (["while" "until" "for"] @left.block (#set! "right" " do")) ([";" ";;" "&"] @term (#lua-match? @term ".")) )
 (["while" "until" "for"] @left.block (#set! "right" ";"))
 (for_statement "in" @middle.block)
 (do_group "do" @middle.block)
