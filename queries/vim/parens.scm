@@ -1,5 +1,7 @@
 ; inherits: _square,_round,_curly,_comma
 
+"#{" @left.curly
+
 ("if" @left.if (#set! "right" "\nendif"))
 ("elseif" @middle.if (#set! "jump" "true"))
 ("else" @middle.if (#set! "jump" "true"))
