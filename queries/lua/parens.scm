@@ -6,12 +6,15 @@
 "then" @middle.block
 
 (ERROR ("while" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
+("while" @left.block (#set! "right" "\nend") "do" @do (#eq? @do "do"))
 ("while" @left.block (#set! "right" " do"))
 
 (ERROR ("for" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
+("for" @left.block (#set! "right" "\nend") "do" @do (#eq? @do "do"))
 ("for" @left.block (#set! "right" " do"))
 
 (ERROR ("if" @left.block (#set! "right" "\nend")) ("then" @then (#eq? @then "then") ))
+("if" @left.block (#set! "right" "\nend") "then" @then (#eq? @then "then"))
 ("if" @left.block (#set! "right" " then"))
 
 ("elseif" @middle.block (#set! "jump" "true"))
