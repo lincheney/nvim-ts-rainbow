@@ -40,6 +40,9 @@
 (case_item [";;" ";&" ";;&"] @middle.case)
 "esac" @right.case
 
+(heredoc_start) @left.heredoc
+(heredoc_end) @right.heredoc
+
 ; do it after the case
 ("(" @left.round (#set! "right" ")"))
 ")" @right.round
