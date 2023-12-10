@@ -23,6 +23,7 @@
 
 (try_statement) @scope.try
 (try_statement "try" @middle.try (#set! "jump" "true") ":" @middle.try)
+(ERROR . "try" @middle.try (#set! "jump" "true") ":" @middle.try) @scope.try
 (try_statement (except_clause "except" @middle.try (#set! "jump" "true") ":" @middle.try))
 ; (except_group_clause "except*" @middle.try ":" @middle.try)?
 (try_statement (else_clause "else" @middle.try (#set! "jump" "true") ":" @middle.try))
