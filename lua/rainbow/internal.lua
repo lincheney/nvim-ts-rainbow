@@ -261,9 +261,18 @@ local function need_invalidate(bufnr)
   elseif #state.byte_changes > 0 and #state.items > 0 then
     -- we only care about byte changes if they make line changes OR we have brackets on the same row
     for _, change in ipairs(state.byte_changes) do
-      local item = state.items[binsearch_items(state.items, {change[1], 0})]
-      if item and (change[1] ~= change[3] or item.start[1] == change[1]) then
-        return true
+      local start = binsearch_items(state.items, {change[1], 0})
+      if state.items[start] then
+        if change[1] ~= change[3] then
+          return true
+        end
+
+        local finish = binsearch_items(state.items, {change[1]+1, 0}, start)
+        for i = start, finish-1 do
+          if state.items[i].start[1] == change[1] or state.items[i].finish[1] == change[1] then
+            return true
+          end
+        end
       end
     end
 
