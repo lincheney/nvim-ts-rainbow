@@ -135,7 +135,7 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
     item.matched = false
     item.level = nil
     item.hl = nil
-    item.metadata = metadata and next(metadata) and metadata or nil
+    item.metadata = metadata
     if not item.start then
       item.start = {}
     end
@@ -237,9 +237,14 @@ local function get_treesitter_iterator(bufnr, tree, lang)
       elseif seen[node:id()] then
         -- skip nodes we have already processed
         -- this can happen if a node is captured multiple times
+        -- merge any new metadata in
+        local m = seen[node:id()]
+        for k, v in pairs(metadata) do
+          m[k] = v
+        end
       else
-        seen[node:id()] = true
-        local name, kind = query.captures[id]:match('^([^.]*)%.(.*)$')
+        seen[node:id()] = metadata
+        local name, kind = query.captures[id]:match('^([^.]*)%.([^.]*)')
         local start_row, start_col = node:start()
         local end_row, end_col = node:end_()
         callback(type_map[name], kind, metadata, start_row, start_col, end_row, end_col)
