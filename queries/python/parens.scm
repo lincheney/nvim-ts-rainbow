@@ -42,4 +42,4 @@
 ; indent after these nodes
 (["else" "elif" "except" "finally" "case"] @_nomatch (#set! indent_next 1))
 ; dedent after these nodes
-(_ ["pass" "raise" "return"] @middle._noindent (#set! no_highlight true) (#set! indent_next -1) )
+(_ ["pass" "raise" "return" "continue" "break"] @middle._noindent (#set! no_highlight true) (#set! indent_next -1) )
