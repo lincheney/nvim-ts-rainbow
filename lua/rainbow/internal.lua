@@ -55,6 +55,7 @@ local function range_overlap(x, y)
 end
 
 local function binsearch_items(items, target, start)
+  -- find the smallest index such that it is <= target
   local start = start or 1
   local finish = #items
   local mid
@@ -84,9 +85,8 @@ local function get_items_in_range(items, start, finish)
   -- end inclusive
   local i = binsearch_items(items, start)
   local j = binsearch_items(items, finish, i)
-  while items[j-1] and tuple_cmp(finish, items[j-1].start) <= 0 do
-    -- this is on the finish, so go back one
-    j = j - 1
+  while items[j+1] and tuple_cmp(items[j+1].start, finish) >= 0 do
+    j = j + 1
   end
   return i, j
 end
@@ -425,7 +425,7 @@ local function on_line(_, win, bufnr, row)
   local lang = state_table[bufnr].lang
   local items = state_table[bufnr].items
   local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
-  for i = start, finish-1 do
+  for i = start, finish do
     local item = items[i]
     if (item.type ~= CONSTANTS.MIDDLE or (item.level and config.highlight_middle)) and not (item.metadata and item.metadata.no_highlight) then
 
@@ -471,7 +471,7 @@ function M.get_matches(bufnr, start, finish)
   local items = state_table[bufnr].items
   local start, finish = get_items_in_range(items, start, finish)
 
-  return vim.list_slice(items, start, finish-1)
+  return vim.list_slice(items, start, finish)
 end
 
 function M.get_matches_at_pos(bufnr, pos)
