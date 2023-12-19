@@ -55,7 +55,7 @@ local function range_overlap(x, y)
 end
 
 local function binsearch_items(items, target, start)
-  -- find the smallest index such that it is <= target
+  -- find the smallest index such that it is >= target
   local start = start or 1
   local finish = #items
   local mid
@@ -84,8 +84,9 @@ end
 local function get_items_in_range(items, start, finish)
   -- end inclusive
   local i = binsearch_items(items, start)
-  local j = binsearch_items(items, finish, i)
-  while items[j+1] and tuple_cmp(items[j+1].start, finish) >= 0 do
+  -- find the largest index that is <= finish
+  local j = binsearch_items(items, finish, i) - 1
+  while items[j+1] and tuple_cmp(items[j+1].start, finish) <= 0 do
     j = j + 1
   end
   return i, j
