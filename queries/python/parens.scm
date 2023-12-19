@@ -9,13 +9,13 @@
 
 ; indent next line if no block
 (for_statement "for" @middle.for "in" @middle.for ":" @middle.for) @scope.for
-(for_statement (else_clause "else" @middle.for ":" @middle.for))
+(for_statement (else_clause "else" @middle.for ":" @middle.for) (#set! align_with for))
 
 (while_statement "while" @middle.while ":" @middle.while) @scope.while
-(while_statement (else_clause "else" @middle.while ":" @middle.while))
+(while_statement (else_clause "else" @middle.while ":" @middle.while) (#set! align_with while))
 
 (if_statement "if" @middle.if ":" @middle.if) @scope.if
-(if_statement (_ ["else" "elif"] @middle.if ":" @middle.if))
+(if_statement (_ ["else" "elif"] @middle.if ":" @middle.if) (#set! align_with if))
 
 (with_statement "with" @middle.with ":" @middle.with) @scope.with
 
@@ -26,7 +26,7 @@
 (try_statement "try" @middle.try ":" @middle.try) @scope.try
 (ERROR . "try" @middle.try.text ":" @middle.try (#eq? @middle.try.text "try") (#set! jump true) ) @scope.try
 ; (except_group_clause "except*" @middle.try ":" @middle.try)?
-(try_statement (_  ["except" "else" "finally"]  @middle.try ":" @middle.try))
+(try_statement (_  ["except" "else" "finally"]  @middle.try ":" @middle.try (#set! align_with try) ))
 
 (match_statement "match" @middle.match ":" @middle.match) @scope.match
 (match_statement (block (case_clause "case" @middle.match ":" @middle.match (#set! align_with "^match$") (#set! align_offset 1) )))
