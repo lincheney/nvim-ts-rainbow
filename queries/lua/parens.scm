@@ -5,17 +5,17 @@
 "do" @middle.block
 "then" @middle.block
 
-(ERROR ("while" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
-("while" @left.block (#set! "right" "\nend") "do" @do (#eq? @do "do"))
 ("while" @left.block (#set! "right" " do"))
+("while" @left.block (#set! "right" "\nend") "do" @do (#eq? @do "do"))
+(ERROR ("while" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
 
-(ERROR ("for" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
-("for" @left.block (#set! "right" "\nend") "do" @do (#eq? @do "do"))
 ("for" @left.block (#set! "right" " do"))
+("for" @left.block (#set! "right" "\nend") "do" @do (#eq? @do "do"))
+(ERROR ("for" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
 
-(ERROR ("if" @left.block (#set! "right" "\nend")) ("then" @then (#eq? @then "then") ))
-("if" @left.block (#set! "right" "\nend") "then" @then (#eq? @then "then"))
 ("if" @left.block (#set! "right" " then"))
+("if" @left.block (#set! "right" "\nend") "then" @then (#eq? @then "then"))
+(ERROR ("if" @left.block (#set! "right" "\nend")) ("then" @then (#eq? @then "then") ))
 
 ("elseif" @middle.block (#set! "jump" "true"))
 ("else" @middle.block (#set! "jump" "true"))
