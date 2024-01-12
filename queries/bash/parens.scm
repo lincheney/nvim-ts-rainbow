@@ -14,27 +14,24 @@
 (">(" @left.round (#set! "right" ")"))
 ("${" @left.curly (#set! "right" "}"))
 
-("if" @left.if (#set! "right" "\nfi") "then")
-(ERROR ("if" @left.if (#set! "right" " then")) ([";" ";;" "&"] @term (#lua-match? @term ".")) )
-("if" @left.if (#set! "right" ";"))
-(if_statement "then" @middle.if)
-("elif" @middle.if (#set! "jump" "true"))
-(elif_clause "then" @middle.if)
+(ERROR ("if" @left.if (#set! "right" "; ")) )
+(ERROR ("if" @left.if (#set! "right" " then\n")) ([";" ";;" "&"] @term (#lua-match? @term ".")) )
+("if" @left.if (#set! "right" "\nfi") "then" @middle.if)
+(ERROR ("elif" @left.if (#set! "right" "; ")) )
+(ERROR ("elif" @left.if (#set! "right" " then\n")) ([";" ";;" "&"] @term (#lua-match? @term ".")) )
+("elif" @middle.if (#set! "jump" "true") "then" @middle.if)
 ("else" @middle.if (#set! "jump" "true"))
 "fi" @right.if
 
-("if" @left.if (#set! "right" "\nfi") "then")
-("if" @left.if (#set! "right" " then"))
-
-(["while" "until" "for"] @left.block (#set! "right" "\ndone") (do_group "do"))
+(["while" "until" "for"] @left.block (#set! "right" "; "))
 (ERROR (["while" "until" "for"] @left.block (#set! "right" " do")) ([";" ";;" "&"] @term (#lua-match? @term ".")) )
-(["while" "until" "for"] @left.block (#set! "right" ";"))
+(["while" "until" "for"] @left.block (#set! "right" "\ndone") (do_group "do"))
 (for_statement "in" @middle.block)
 (do_group "do" @middle.block)
 "done" @right.block
 
+("case" @left.case (#set! "right" " in\n"))
 (ERROR ("case" @left.case (#set! "right" "\nesac")) ("in" @in (#eq? @in "in") ))
-("case" @left.case (#set! "right" " in"))
 (case_statement "in" @middle.case)
 (case_item ")" @middle.case (#set! "jump" "true"))
 (case_item [";;" ";&" ";;&"] @middle.case)
