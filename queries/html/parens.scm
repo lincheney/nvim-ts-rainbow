@@ -1,51 +1,51 @@
 (_
   . (start_tag
-      "<" @middle.angle
-      (tag_name) @middle.tag_name
-      ">" @middle.angle
+    "<" @middle.angle
+    (tag_name) @middle.tag_name
+    ">" @middle.angle
   ) @left.tag (#set! "no_highlight" "true")
   (end_tag) @right.tag
 )
 
 (_
   . (start_tag
-        (tag_name) @skip.tag_name (#not-any-of? @skip.tag_name
-            "area"
-            "base"
-            "br"
-            "col"
-            "embed"
-            "hr"
-            "img"
-            "input"
-            "link"
-            "meta"
-            "param"
-            "source"
-            "track"
-            "wbr"
-        )
+    (tag_name) @skip.tag_name (#not-any-of? @skip.tag_name
+      "area"
+      "base"
+      "br"
+      "col"
+      "embed"
+      "hr"
+      "img"
+      "input"
+      "link"
+      "meta"
+      "param"
+      "source"
+      "track"
+      "wbr"
+    )
 ) @left.erroneous_start_tag )
 (_
   . (start_tag
-      "<" @middle.angle
-        (tag_name) @middle.tag_name (#any-of? @middle.tag_name
-            "area"
-            "base"
-            "br"
-            "col"
-            "embed"
-            "hr"
-            "img"
-            "input"
-            "link"
-            "meta"
-            "param"
-            "source"
-            "track"
-            "wbr"
-        )
-      ">" @middle.angle
+    "<" @middle.angle
+      (tag_name) @middle.tag_name (#any-of? @middle.tag_name
+        "area"
+        "base"
+        "br"
+        "col"
+        "embed"
+        "hr"
+        "img"
+        "input"
+        "link"
+        "meta"
+        "param"
+        "source"
+        "track"
+        "wbr"
+      )
+    ">" @middle.angle
   ) @scope.void_element
 )
 
