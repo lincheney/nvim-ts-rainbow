@@ -2,24 +2,31 @@
 ("function" @left.block (#set! "right" "\nend"))
 
 (do_statement "do" @left.block (#set! "right" "\nend"))
-"do" @middle.block
-"then" @middle.block
+(ERROR ("do" @left.block (#set! "right" "\nend")))
+(do_statement "end" @right.block)
 
 ("while" @left.block (#set! "right" " do"))
-("while" @left.block (#set! "right" "\nend") "do" @do (#eq? @do "do"))
-(ERROR ("while" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
+("while" @left.block (#set! "right" "\nend") "do" @middle.block (#eq? @middle.block "do"))
+(ERROR ("while" @left.block (#set! "right" "\nend")) ("do" @middle.block (#eq? @middle.block "do") ))
+(while_statement "do" @middle.block)
+(while_statement "end" @right.block)
 
 ("for" @left.block (#set! "right" " do"))
-("for" @left.block (#set! "right" "\nend") "do" @do (#eq? @do "do"))
-(ERROR ("for" @left.block (#set! "right" "\nend")) ("do" @do (#eq? @do "do") ))
+("for" @left.block (#set! "right" "\nend") "do" @middle.block (#eq? @middle.block "do"))
+(ERROR ("for" @left.block (#set! "right" "\nend")) ("do" @middle.block (#eq? @middle.block "do") ))
+(for_statement "do" @middle.block)
+(for_statement "end" @right.block)
 
-("if" @left.block (#set! "right" " then"))
-("if" @left.block (#set! "right" "\nend") "then" @then (#eq? @then "then"))
-(ERROR ("if" @left.block (#set! "right" "\nend")) ("then" @then (#eq? @then "then") ))
+("if" @left.if (#set! "right" " then"))
+("if" @left.if (#set! "right" "\nend") "then" @middle.if (#eq? @middle.if "then"))
+(ERROR ("if" @left.if (#set! "right" "\nend")) ("then" @middle.if (#eq? @middle.if "then") ))
+("elseif" @middle.if (#set! "jump" "true") (#set! align_with if))
+("else" @middle.if (#set! "jump" "true") (#set! align_with if))
+(if_statement "end" @right.if)
 
-("elseif" @middle.block (#set! "jump" "true"))
-("else" @middle.block (#set! "jump" "true"))
-"end" @right.block
-
-("repeat" @left.repeat-until (#set! "right" "\nuntil"))
+("repeat" @left.repeat-until (#set! "right" "\nuntil "))
 "until" @right.repeat-until
+
+; then anywhere else is wrong
+"then" @right.wrong
+"end" @right.wrong
