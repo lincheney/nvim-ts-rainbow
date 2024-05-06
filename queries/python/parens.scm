@@ -3,7 +3,7 @@
 (interpolation) @scope.interpolation
 
 ; do not indent next line if inline block
-(_ (block _) @middle._block (#not-lua-match? @middle._block "^%s*$") (#set! indent_next -999) (#set! no_highlight true))
+(_ (block _) @middle._block (#not-lua-match? @middle._block "\n") (#set! indent_next -999) (#set! no_highlight true))
 ; do not indent in string
 (string . (string_start) @left.string (#set! indent_next 0) (#set! no_highlight true))
 (string (string_end) @right.string . (#set! indent_next 0) (#set! no_highlight true))
