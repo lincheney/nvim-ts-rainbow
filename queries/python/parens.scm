@@ -5,8 +5,8 @@
 ; do not indent next line if inline block
 (_ (block _) @middle._block (#set! indent_next_at_most 0) (#set! no_highlight true))
 ; do not indent in string
-(string . (string_start) @left.string (#set! indent_next 0) (#set! no_highlight true))
-(string (string_end) @right.string . (#set! indent_next 0) (#set! no_highlight true))
+(string . (string_start) @left.string (#set! indent_next -999) (#set! no_highlight true))
+(string (string_end) @right.string . (#set! indent_next -999) (#set! no_highlight true))
 
 ; indent next line if no block
 (for_statement "for" @middle.for "in" @middle.for ":" @middle.for) @scope.for
