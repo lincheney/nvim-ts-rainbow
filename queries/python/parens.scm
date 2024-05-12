@@ -3,7 +3,7 @@
 (interpolation) @scope.interpolation
 
 ; do not indent next line if inline block
-(_ (block _) @middle._block (#not-lua-match? @middle._block "\n") (#set! indent_next -999) (#set! no_highlight true))
+(_ (block _) @middle._block (#set! indent_next_at_most 0) (#set! no_highlight true))
 ; do not indent in string
 (string . (string_start) @left.string (#set! indent_next 0) (#set! no_highlight true))
 (string (string_end) @right.string . (#set! indent_next 0) (#set! no_highlight true))
@@ -43,4 +43,4 @@
 ; indent after these nodes
 (["else" "elif" "except" "finally" "case"] @_nomatch (#set! indent_next 1))
 ; dedent after these nodes
-(_ ["pass" "raise" "return" "continue" "break"] @middle._noindent (#set! no_highlight true) (#set! indent_next -1) )
+(_ ["pass" "raise" "return" "continue" "break"] @middle._noindent (#set! no_highlight true) (#set! indent_next_at_most -1) )
