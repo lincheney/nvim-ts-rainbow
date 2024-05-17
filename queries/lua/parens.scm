@@ -25,6 +25,7 @@
 ("elseif" @middle.if (#set! "jump" "true") (#set! align_with if) ("then" @middle.if (#eq? @middle.if "then") ))
 ("elseif" @left.wrong (#set! align_with if) (#set! "right" " then\n"))
 ("else" @middle.if (#set! "jump" "true") (#set! align_with if))
+("then" @middle.if (#set! align_with if))
 (if_statement "end" @right.if)
 
 ("repeat" @left.repeat-until (#set! "right" "\nuntil "))
