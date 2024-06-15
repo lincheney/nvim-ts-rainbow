@@ -248,6 +248,13 @@ local function get_treesitter_iterator(bufnr, tree, lang)
         local name, kind = query.captures[id]:match('^([^.]*)%.([^.]*)')
         local start_row, start_col = node:start()
         local end_row, end_col = node:end_()
+        if metadata[id] then
+          -- capture specific metadata
+          metadata = vim.deepcopy(metadata)
+          for k, v in pairs(metadata[id]) do
+            metadata[k] = v
+          end
+        end
         callback(type_map[name], kind, metadata, start_row, start_col, end_row, end_col)
       end
     end
