@@ -9,7 +9,7 @@
     "<" @middle.angle
     name: (identifier) @middle.tag_name
     ">" @middle.angle
-  ) @left.tag (#set! "no_highlight" "true")
+  ) @left.tag (#set! @left.tag "no_highlight" "true")
   (jsx_closing_element name: (identifier) @skip.close_tag) @right.tag
   (#eq? @skip.close_tag @middle.tag_name)
 )
