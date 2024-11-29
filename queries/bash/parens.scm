@@ -33,7 +33,7 @@
 ("case" @left.case (#set! "right" " in\n"))
 (ERROR ("case" @left.case (#set! "right" "\nesac")) ("in" @in (#eq? @in "in") ))
 (case_statement "in" @middle.case)
-(case_item ")" @middle.case (#set! "jump" "true"))
+(case_item ["(" ")"] @middle.case (#set! "jump" "true"))
 (case_item [";;" ";&" ";;&"] @middle.case)
 "esac" @right.case
 
