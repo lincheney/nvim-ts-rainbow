@@ -8,6 +8,7 @@
 ("((" @left.round.double (#set! "right" "))"))
 ("$((" @left.round.double (#set! "right" "))"))
 "))" @right.round.double
+("$[" @left.square (#set! "right" "]"))
 
 ("$(" @left.round (#set! "right" ")"))
 ("<(" @left.round (#set! "right" ")"))
