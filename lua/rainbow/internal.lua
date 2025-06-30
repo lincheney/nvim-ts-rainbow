@@ -387,7 +387,7 @@ function M.attach(bufnr, lang, config)
     lang = lang,
     changes = {},
     items = nil,
-    nodes = nil,
+    nodes = {},
     parser = parser,
     config = config,
     hl_cache = {},
@@ -401,33 +401,62 @@ function M.attach(bufnr, lang, config)
       return true
     end
 
+    if old_end_row == 0 then
+      old_end_col = start_col + old_end_col
+    end
+    if end_row == 0 then
+      end_col = start_col + end_col
+    end
     local line_shift = end_row - old_end_row
-    -- lines deleted between start_row .. start_row + old_end_row
+    local col_shift = end_col - old_end_col
+    local start = {start_row, start_col}
+    local finish = {start_row + old_end_row, old_end_col}
 
-    if line_shift ~= 0 then
-      for _, nodes in pairs(state.nodes) do
-        for _, node in ipairs(nodes) do
-          -- if comes after the deleted range, shift it
-          if node.finish[1] > start_row then
-            node.finish[1] = math.max(node.finish[1] + line_shift, start_row)
-          end
-          if node.start[1] > start_row then
-            node.start[1] = math.max(node.start[1] + line_shift, start_row)
-          end
-        end
-      end
+    local function callback(items)
+      local shift = 0
+      for i = 1, #items do
+        local item = items[i]
 
-      -- shift some
-      for _, item in ipairs(state.items) do
-        -- if comes after the deleted range, shift it
-        if item.finish[1] >= start_row then
-          item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
+        -- delete items fully in the changed range
+        if tuple_cmp(item.start, finish) <= 0 and tuple_cmp(item.finish, start) > 0 then
+          shift = shift + 1
+          items[i] = nil
+        else
+
+          if shift > 0 then
+            -- cover up a deleted item
+            items[i - shift] = items[i]
+            items[i] = nil
+          end
+
+          -- on the last line, shift it horizontally
+          if col_shift ~= 0 then
+            if item.start[1] == finish[1] and item.start[2] >= finish[2] then
+              item.start[2] = item.start[2] + col_shift
+            end
+            if item.finish[1] == finish[1] and item.finish[2] >= finish[2] then
+              item.finish[2] = item.finish[2] + col_shift
+            end
+          end
+          -- if comes after the deleted range, shift it vertically
+          if line_shift ~= 0 then
+            if tuple_cmp(item.finish, start) >= 0 then
+              item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
+            end
+            if tuple_cmp(item.start, start) >= 0 then
+              item.start[1] = math.max(item.start[1] + line_shift, start_row)
+            end
+          end
         end
-        if item.start[1] >= start_row then
-          item.start[1] = math.max(item.start[1] + line_shift, start_row)
-        end
+
       end
     end
+
+    for _, nodes in pairs(state.nodes) do
+      callback(nodes)
+    end
+    -- shift some
+    callback(state.items)
 
     -- also need to shift all other changes
     -- do i need this?
@@ -469,42 +498,44 @@ function M.attach(bufnr, lang, config)
 
   parser:register_cbs({
     on_changedtree = function(changes, tree)
-      if state_table[bufnr] == state then
-        -- on_bytes has already run, so all nodes are shifted
-        -- remove any in range
-        local start = math.huge
-        local finish = 0
-        for _, change in ipairs(changes) do
-          start = math.min(start, change[1])
-          finish = math.max(finish, change[4] + 1)
-        end
-
-        for _, nodes in pairs(state.nodes) do
-          local this_start = start
-          local this_finish = finish
-          for _, node in ipairs(nodes) do
-            if node.start[1] < this_finish and node.finish[1] > this_start then
-              this_start = math.min(this_start, node.start[1])
-              this_finish = math.max(this_finish, node.finish[1])
-            end
-          end
-
-          for i = #nodes, 1, -1 do
-            local node = nodes[i]
-            if node.start[1] < this_finish and node.finish[1] > this_start then
-              -- delete node that overlaps with the range
-              -- move the last one in to fill the gap
-              -- dont worry about sorting, it happens later
-              nodes[i] = nodes[#nodes]
-              nodes[#nodes] = nil
-            end
-          end
-          start = math.min(start, this_start)
-          finish = math.max(finish, this_finish)
-        end
-        table.insert(state.changes, {start, finish})
-
+      if #changes == 0 or state_table[bufnr] ~= state then
+        return
       end
+
+      -- on_bytes has already run, so all nodes are shifted
+      -- remove any in range
+      local start = math.huge
+      local finish = 0
+      for _, change in ipairs(changes) do
+        start = math.min(start, change[1])
+        finish = math.max(finish, change[4] + 1)
+      end
+
+      for _, nodes in pairs(state.nodes) do
+        local this_start = {start, 0}
+        local this_finish = {finish, 0}
+        for _, node in ipairs(nodes) do
+          if tuple_cmp(node.start, this_finish) < 0 and tuple_cmp(node.finish, this_start) >= 0 then
+            this_start[1] = math.min(this_start[1], node.start[1])
+            this_finish[1] = math.max(this_finish[1], node.finish[1])
+          end
+        end
+
+        for i = #nodes, 1, -1 do
+          local node = nodes[i]
+          if tuple_cmp(node.start, this_finish) < 0 and tuple_cmp(node.finish, this_start) >= 0 then
+            -- delete node that overlaps with the range
+            -- move the last one in to fill the gap
+            -- dont worry about sorting, it happens later
+            nodes[i] = nodes[#nodes]
+            nodes[#nodes] = nil
+          end
+        end
+        start = math.min(start, this_start[1])
+        finish = math.max(finish, this_finish[1])
+      end
+      table.insert(state.changes, {start, finish})
+
     end,
     on_bytes = on_bytes,
   })
