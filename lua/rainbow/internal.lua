@@ -418,7 +418,7 @@ function M.attach(bufnr, lang, config)
         local item = items[i]
 
         -- delete items fully in the changed range
-        if tuple_cmp(item.start, finish) <= 0 and tuple_cmp(item.finish, start) > 0 then
+        if tuple_cmp(item.start, start) >= 0 and tuple_cmp(item.finish, finish) <= 0 then
           shift = shift + 1
           items[i] = nil
         else
