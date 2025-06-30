@@ -56,7 +56,7 @@ end
 
 local function binsearch_items(items, target, start)
   -- find the smallest index such that it is >= target
-  local start = start or 1
+  start = start or 1
   local finish = #items
   local mid
 
@@ -119,14 +119,17 @@ end
 --- @param tree table # Syntax tree
 --- @param lang string # Language
 --- @param pool of tables for reuse
-local function parse_matches(bufnr, iterator, pool, tree_num)
+local function parse_matches(bufnr, nodes, pool, tree_num)
   -- invalidate everything for now
   -- figure out how to do damage later
   local items = {}
   local stack = {}
   local scopes = {}
 
-  iterator(function(type, kind, metadata, start_row, start_col, end_row, end_col)
+  for _, node in ipairs(nodes) do
+    local type = node.type
+    local kind = node.kind
+
     -- recycle tables from the pool
     local item = table.remove(pool) or {}
     item.type = type
@@ -136,17 +139,17 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
     item.matched = false
     item.level = nil
     item.hl = nil
-    item.metadata = metadata
+    item.metadata = node.metadata
     if not item.start then
       item.start = {}
     end
     if not item.finish then
       item.finish = {}
     end
-    item.start[1] = start_row
-    item.start[2] = start_col
-    item.finish[1] = end_row
-    item.finish[2] = end_col
+    item.start[1] = node.start[1]
+    item.start[2] = node.start[2]
+    item.finish[1] = node.finish[1]
+    item.finish[2] = node.finish[2]
 
     while #scopes > 0 and tuple_cmp(item.start, scopes[#scopes].finish) >= 0 do
       -- this scope has finished
@@ -184,7 +187,7 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
 
     end
 
-  end)
+  end
 
   for i = #scopes, 1, -1 do
     table.insert(items, finish_scope(scopes[i], pool))
@@ -217,7 +220,7 @@ local function parse_matches(bufnr, iterator, pool, tree_num)
   return items
 end
 
-local function get_treesitter_iterator(bufnr, tree, lang)
+local function get_nodes(bufnr, tree, lang, range, nodes, tree_num)
   if not lang then
     return
   end
@@ -232,33 +235,42 @@ local function get_treesitter_iterator(bufnr, tree, lang)
   local seen = {}
 
   local type_map = {left=CONSTANTS.LEFT, right=CONSTANTS.RIGHT, middle=CONSTANTS.MIDDLE, scope=CONSTANTS.SCOPE_LEFT}
-  return function(callback)
-    for id, node, metadata in query:iter_captures(root, bufnr, 0, -1) do
-      if node:missing() then
-      elseif seen[node:id()] then
-        -- skip nodes we have already processed
-        -- this can happen if a node is captured multiple times
-        -- merge any new metadata in
-        local m = seen[node:id()]
-        for k, v in pairs(metadata) do
-          m[k] = v
-        end
-      else
-        seen[node:id()] = metadata
-        local name, kind = query.captures[id]:match('^([^.]*)%.([^.]*)')
-        local start_row, start_col = node:start()
-        local end_row, end_col = node:end_()
-        if metadata[id] then
-          -- capture specific metadata
-          metadata = vim.deepcopy(metadata)
-          for k, v in pairs(metadata[id]) do
-            metadata[k] = v
-          end
-        end
-        callback(type_map[name], kind, metadata, start_row, start_col, end_row, end_col)
+  nodes[tree_num] = nodes[tree_num] or {}
+  nodes = nodes[tree_num]
+
+  for id, node, metadata in query:iter_captures(root, bufnr, range[1], range[2]) do
+    if node:missing() then
+    elseif seen[node:id()] then
+      -- skip nodes we have already processed
+      -- this can happen if a node is captured multiple times
+      -- merge any new metadata in
+      local m = seen[node:id()]
+      for k, v in pairs(metadata) do
+        m[k] = v
       end
+    else
+      seen[node:id()] = metadata
+      local name, kind = query.captures[id]:match('^([^.]*)%.([^.]*)')
+      local start_row, start_col = node:start()
+      local end_row, end_col = node:end_()
+      if metadata[id] then
+        -- capture specific metadata
+        metadata = vim.deepcopy(metadata)
+        for k, v in pairs(metadata[id]) do
+          metadata[k] = v
+        end
+      end
+      table.insert(nodes, {
+          type = type_map[name],
+          kind = kind,
+          metadata = metadata,
+          start = {start_row, start_col},
+          finish = {end_row, end_col},
+      })
     end
   end
+
+  return nodes
 end
 
 local function need_invalidate(bufnr)
@@ -266,28 +278,23 @@ local function need_invalidate(bufnr)
 
   if not state.items then
     -- first run
-    return true
+    return {0, -1}
 
   elseif #state.changes > 0 then
-    -- tree changes
-    return true
 
-  elseif #state.byte_changes > 0 and #state.items > 0 then
-    -- we only care about byte changes if they make line changes OR we have brackets on the same row
-    for _, change in ipairs(state.byte_changes) do
-      local start = binsearch_items(state.items, {change[1], 0})
-      if state.items[start] then
-        if change[1] ~= change[3] then
-          return true
-        end
-
-        local finish = binsearch_items(state.items, {change[1]+1, 0}, start)
-        for i = start, finish-1 do
-          if state.items[i].start[1] == change[1] or state.items[i].finish[1] == change[1] then
-            return true
-          end
-        end
+    -- get a range encompasing all pending ranges
+    local range = {math.huge, 0}
+    for _, change in ipairs(state.changes) do
+      if change[1] and range[1] > change[1] then
+        range[1] = change[1]
       end
+      if change[2] and range[2] < change[2] then
+        range[2] = change[2]
+      end
+    end
+
+    if range[1] < range[2] then
+      return range
     end
 
   end
@@ -301,31 +308,47 @@ function M.update(bufnr, force)
     return
   end
 
-  local invalidate = force or need_invalidate(bufnr)
-
   local state = state_table[bufnr]
+  local pool = nil
+  if force then
+    pool = state.items
+    state.items = nil
+  end
+  local invalidate_range = need_invalidate(bufnr)
+
   state.changes = {}
-  state.byte_changes = {}
-  if not invalidate then
+  if not invalidate_range then
     return
   end
 
-  local num_trees = 0
-  local pool = state.items or {}
-
+  pool = pool or state.items or {}
   state.items = {}
+  state.nodes = state.nodes or {}
+
+  local tree_num = 0
   state.parser:for_each_tree(function(tree, sub_parser)
+    tree_num = tree_num + 1
     local lang = sub_parser:lang()
-    local iterator = get_treesitter_iterator(bufnr, tree, lang)
-    if iterator then
-      local items = parse_matches(bufnr, iterator, pool, num_trees)
-      num_trees = num_trees + 1
-      vim.list_extend(state.items, items)
+    local nodes = get_nodes(bufnr, tree, lang, invalidate_range, state.nodes, tree_num)
+    if nodes then
+      table.sort(nodes, function(x, y)
+        local cmp = tuple_cmp(x.start, y.start)
+        if cmp == 0 then
+          return tuple_cmp(x.finish, y.finish) > 0
+        else
+          return cmp < 0
+        end
+      end)
     end
   end)
 
+  for k, v in pairs(state.nodes) do
+    local items = parse_matches(bufnr, v, pool, k)
+    vim.list_extend(state.items, items)
+  end
+
   -- don't need to sort if only 1 tree
-  if num_trees > 1 then
+  if tree_num > 1 then
     table.sort(state.items, function(x, y)
       local cmp = tuple_cmp(x.start, y.start)
       if cmp == 0 then
@@ -363,8 +386,8 @@ function M.attach(bufnr, lang, config)
   state_table[bufnr] = {
     lang = lang,
     changes = {},
-    byte_changes = {},
     items = nil,
+    nodes = nil,
     parser = parser,
     config = config,
     hl_cache = {},
@@ -372,28 +395,115 @@ function M.attach(bufnr, lang, config)
   local state = state_table[bufnr]
 
   local on_bytes = function(bufnr, tick, start_row, start_col, offset, old_end_row, old_end_col, old_len, end_row, end_col, len)
-    -- sometimes there's no syntax/tree changes, but there are byte changes
-    -- these can shift the positions of later brackets
-    -- so we reparse in these cases
-    if state_table[bufnr] == state then
-      local change = {
-        start_row + math.min(0, end_row-old_end_row),
-        start_col + math.min(0, end_col-old_end_col),
-        start_row + math.max(0, end_row-old_end_row),
-        start_col + math.max(0, end_col-old_end_col),
-        delete = old_end_col > end_col,
-      }
-      table.insert(state.byte_changes, change);
-    else
+
+    if state_table[bufnr] ~= state then
       -- detach
       return true
     end
+
+    local line_shift = end_row - old_end_row
+    -- lines deleted between start_row .. start_row + old_end_row
+
+    if line_shift ~= 0 then
+      for _, nodes in pairs(state.nodes) do
+        for _, node in ipairs(nodes) do
+          -- if comes after the deleted range, shift it
+          if node.finish[1] > start_row then
+            node.finish[1] = math.max(node.finish[1] + line_shift, start_row)
+          end
+          if node.start[1] > start_row then
+            node.start[1] = math.max(node.start[1] + line_shift, start_row)
+          end
+        end
+      end
+
+      -- shift some
+      for _, item in ipairs(state.items) do
+        -- if comes after the deleted range, shift it
+        if item.finish[1] >= start_row then
+          item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
+        end
+        if item.start[1] >= start_row then
+          item.start[1] = math.max(item.start[1] + line_shift, start_row)
+        end
+      end
+    end
+
+    -- also need to shift all other changes
+    -- do i need this?
+    for _, change in ipairs(state.changes) do
+      if change[1] >= start_row + old_end_row then
+        -- after the change but no overlap
+        change[1] = change[1] + line_shift
+        change[2] = change[2] + line_shift
+
+      elseif change[2] > start_row then
+        -- overlap
+        local left_overlap = change[1] < start_row
+        local right_overlap = start_row + old_end_row < change[2]
+
+        if left_overlap or right_overlap then
+
+          if left_overlap then
+            -- change[1] = change[1]
+          elseif right_overlap then
+            change[1] = start_row + end_row
+          end
+
+          if right_overlap then
+            change[2] = change[2] + line_shift
+          elseif left_overlap then
+            change[2] = start_row
+          end
+
+        else
+          change[1] = nil
+          change[2] = nil
+        end
+
+      end
+
+    end
+
   end
 
   parser:register_cbs({
     on_changedtree = function(changes, tree)
       if state_table[bufnr] == state then
-        vim.list_extend(state.changes, changes)
+        -- on_bytes has already run, so all nodes are shifted
+        -- remove any in range
+        local start = math.huge
+        local finish = 0
+        for _, change in ipairs(changes) do
+          start = math.min(start, change[1])
+          finish = math.max(finish, change[4] + 1)
+        end
+
+        for _, nodes in pairs(state.nodes) do
+          local this_start = start
+          local this_finish = finish
+          for _, node in ipairs(nodes) do
+            if node.start[1] < this_finish and node.finish[1] > this_start then
+              this_start = math.min(this_start, node.start[1])
+              this_finish = math.max(this_finish, node.finish[1])
+            end
+          end
+
+          for i = #nodes, 1, -1 do
+            local node = nodes[i]
+            if node.start[1] < this_finish and node.finish[1] > this_start then
+              -- delete node that overlaps with the range
+              -- move the last one in to fill the gap
+              -- dont worry about sorting, it happens later
+              nodes[i] = nodes[#nodes]
+              nodes[#nodes] = nil
+            end
+          end
+          start = math.min(start, this_start)
+          finish = math.max(finish, this_finish)
+        end
+        table.insert(state.changes, {start, finish})
+
       end
     end,
     on_bytes = on_bytes,
@@ -474,10 +584,10 @@ function M.get_matches(bufnr, start, finish)
   if not state_table[bufnr] then
     return
   end
-  local start = start or {-1, math.huge}
-  local finish = finish or {math.huge, math.huge}
+  start = start or {-1, math.huge}
+  finish = finish or {math.huge, math.huge}
   local items = state_table[bufnr].items
-  local start, finish = get_items_in_range(items, start, finish)
+  start, finish = get_items_in_range(items, start, finish)
 
   return vim.list_slice(items, start, finish)
 end
