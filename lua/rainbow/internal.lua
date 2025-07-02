@@ -318,7 +318,7 @@ local function process_on_bytes(state, args)
       end
       -- if comes after the deleted range, shift it vertically
       if line_shift ~= 0 then
-        if tuple_cmp(item.finish, start) >= 0 then
+        if tuple_cmp(item.finish, start) > 0 then
           item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
         end
         if tuple_cmp(item.start, start) >= 0 then
@@ -383,7 +383,6 @@ end
 
 local function process_on_changedtree(state, args)
   local type, changes = unpack(args)
-  -- on_bytes has already run, so all nodes are shifted
   local change_start = math.huge
   local change_finish = 0
   for _, change in ipairs(changes) do
