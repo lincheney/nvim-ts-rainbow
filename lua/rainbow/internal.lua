@@ -472,8 +472,8 @@ function M.update(bufnr, force)
   if invalidate_range[1] == 0 and invalidate_range[2] == -1 then
     clear_table(state.nodes)
   else
-    local shift = 0
     for _, nodes in pairs(state.nodes) do
+      local shift = 0
       for i, node in ipairs(nodes) do
         if tuple_cmp(node.start, {invalidate_range[2], 0}) < 0 and tuple_cmp(node.finish, {invalidate_range[1], 0}) >= 0 then
           shift = shift + 1
