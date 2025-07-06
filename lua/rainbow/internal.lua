@@ -308,22 +308,23 @@ local function process_on_bytes(state, args)
 
     for _, item in ipairs(items) do
       -- on the last line, shift it horizontally
-      if col_shift ~= 0 then
-        if item.start[1] == finish[1] and item.start[2] >= finish[2] then
-          item.start[2] = item.start[2] + col_shift
-        end
-        if item.finish[1] == finish[1] and item.finish[2] >= finish[2] then
-          item.finish[2] = item.finish[2] + col_shift
-        end
-      end
+      local start_col_shift = col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= finish[2]
+      local finish_col_shift = col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= finish[2]
       -- if comes after the deleted range, shift it vertically
-      if line_shift ~= 0 then
-        if tuple_cmp(item.finish, start) > 0 then
-          item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
-        end
-        if tuple_cmp(item.start, start) >= 0 then
-          item.start[1] = math.max(item.start[1] + line_shift, start_row)
-        end
+      local start_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
+      local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) > 0
+
+      if start_col_shift then
+        item.start[2] = item.start[2] + col_shift
+      end
+      if finish_col_shift then
+        item.finish[2] = item.finish[2] + col_shift
+      end
+      if start_line_shift then
+        item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
+      end
+      if finish_line_shift then
+        item.start[1] = math.max(item.start[1] + line_shift, start_row)
       end
     end
   end
