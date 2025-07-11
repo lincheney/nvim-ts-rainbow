@@ -244,6 +244,12 @@ local function get_nodes(bufnr, tree, lang, range, nodes, tree_num)
   nodes[tree_num] = nodes[tree_num] or {}
   nodes = nodes[tree_num]
 
+  -- pop everything off on the right, add it back later
+  local right = {}
+  while #nodes > 0 and nodes[#nodes].start[1] >= range[1] do
+    table.insert(right, table.remove(nodes))
+  end
+
   for id, node, metadata in query:iter_captures(root, bufnr, range[1], range[2]) do
     if node:missing() then
     elseif seen[node:id()] then
@@ -266,7 +272,15 @@ local function get_nodes(bufnr, tree, lang, range, nodes, tree_num)
           metadata[k] = v
         end
       end
-      table.insert(nodes, {
+
+      -- insert at the end
+      local pos = #nodes + 1
+      if start_row < range[1] then
+        -- unless this does not start in the range, in which case find the correct index to insert at
+        pos = binsearch_items(nodes, {start_row, start_col})
+      end
+
+      table.insert(nodes, pos, {
           type = type_map[name],
           kind = kind,
           metadata = metadata,
@@ -276,7 +290,9 @@ local function get_nodes(bufnr, tree, lang, range, nodes, tree_num)
     end
   end
 
-  return nodes
+  for i = #right, 1, -1 do
+    table.insert(nodes, right[i])
+  end
 end
 
 local function process_on_bytes(state, args)
@@ -497,17 +513,7 @@ function M.update(bufnr, force)
   state.parser:for_each_tree(function(tree, sub_parser)
     tree_num = tree_num + 1
     local lang = sub_parser:lang()
-    local nodes = get_nodes(bufnr, tree, lang, invalidate_range, state.nodes, tree_num)
-    if nodes then
-      table.sort(nodes, function(x, y)
-        local cmp = tuple_cmp(x.start, y.start)
-        if cmp == 0 then
-          return tuple_cmp(x.finish, y.finish) > 0
-        else
-          return cmp < 0
-        end
-      end)
-    end
+    get_nodes(bufnr, tree, lang, invalidate_range, state.nodes, tree_num)
   end)
 
   for k, v in pairs(state.nodes) do
