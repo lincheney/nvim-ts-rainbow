@@ -206,6 +206,7 @@ local function parse_matches(bufnr, nodes, pool, tree_num)
         scope[k] = v
       end
       scope._node = node
+      scope.start = {unpack(scope.start)}
       scope.finish = {unpack(scope.finish)}
       scope.matched = true
       table.insert(scopes, scope)
