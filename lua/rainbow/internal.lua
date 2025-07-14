@@ -98,9 +98,21 @@ local function get_items_in_range(items, start, finish)
   return i, j
 end
 
+local function recycle_from_pool(pool)
+  return {}
+  -- since most items are not recyclable, it is actually slower to find one
+  -- while #pool > 0 do
+    -- local val = table.remove(pool)
+    -- if val and val.recyclable then
+      -- return val
+    -- end
+  -- end
+  -- return {recyclable = true}
+end
+
 local function finish_scope(scope, pool)
   -- recycle tables from the pool
-  local scope_end = table.remove(pool) or {}
+  local scope_end = recycle_from_pool(pool)
   scope_end.tree_num = scope.tree_num
   scope_end.kind = scope.kind
   scope_end.type = CONSTANTS.SCOPE_RIGHT
@@ -137,25 +149,26 @@ local function parse_matches(bufnr, nodes, pool, tree_num)
     local kind = node.kind
 
     -- recycle tables from the pool
-    local item = table.remove(pool) or {}
-    item.type = type
+    local item = node
+    -- local item = table.remove(pool) or {}
+    -- item.type = type
     item.tree_num = tree_num
-    item.kind = kind
+    -- item.kind = kind
     item.parent = nil
     item.matched = false
     item.level = nil
     item.hl = nil
-    item.metadata = node.metadata
-    if not item.start then
-      item.start = {}
-    end
-    if not item.finish then
-      item.finish = {}
-    end
-    item.start[1] = node.start[1]
-    item.start[2] = node.start[2]
-    item.finish[1] = node.finish[1]
-    item.finish[2] = node.finish[2]
+    -- item.metadata = node.metadata
+    -- if not item.start then
+      -- item.start = {}
+    -- end
+    -- if not item.finish then
+      -- item.finish = {}
+    -- end
+    -- item.start[1] = node.start[1]
+    -- item.start[2] = node.start[2]
+    -- item.finish[1] = node.finish[1]
+    -- item.finish[2] = node.finish[2]
 
     while #scopes > 0 and tuple_cmp(item.start, scopes[#scopes].finish) >= 0 do
       -- this scope has finished
@@ -175,7 +188,7 @@ local function parse_matches(bufnr, nodes, pool, tree_num)
           x.matched = item
           item.matched = x
           -- pop off the stack
-          for j = i, #stack do
+          for j = #stack, i, -1 do
             stack[j] = nil
           end
           break
@@ -187,9 +200,15 @@ local function parse_matches(bufnr, nodes, pool, tree_num)
       table.insert(items, item)
 
     elseif type == CONSTANTS.SCOPE_LEFT then
-      item.matched = true
-      table.insert(scopes, item)
-      table.insert(items, item)
+      local scope = recycle_from_pool(pool)
+      for k, v in pairs(item) do
+        scope[k] = v
+      end
+      -- need a clone of the finish as it gets modified
+      scope.finish = {unpack(scope.finish)}
+      scope.matched = true
+      table.insert(scopes, scope)
+      table.insert(items, scope)
 
     end
 
@@ -200,9 +219,7 @@ local function parse_matches(bufnr, nodes, pool, tree_num)
   end
 
   -- clear stack
-  for i = #stack, 1, -1 do
-    stack[i] = nil
-  end
+  clear_table(stack)
 
   -- set the level of each bracket, starting from 0
   local level = 0
@@ -327,8 +344,8 @@ local function process_on_bytes(state, args)
       local start_col_shift = col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= finish[2]
       local finish_col_shift = col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= finish[2]
       -- if comes after the deleted range, shift it vertically
-      local start_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
-      local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) > 0
+      local start_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) >= 0
+      local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
 
       if start_col_shift then
         item.start[2] = item.start[2] + col_shift
@@ -337,17 +354,17 @@ local function process_on_bytes(state, args)
         item.finish[2] = item.finish[2] + col_shift
       end
       if start_line_shift then
-        item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
+        item.start[1] = math.max(item.start[1] + line_shift, start_row)
       end
       if finish_line_shift then
-        item.start[1] = math.max(item.start[1] + line_shift, start_row)
+        item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
       end
     end
   end
 
-  for _, nodes in pairs(state.nodes) do
-    callback(nodes)
-  end
+  -- for _, nodes in pairs(state.nodes) do
+    -- callback(nodes)
+  -- end
   -- shift some
   callback(state.items)
 
