@@ -200,11 +200,12 @@ local function parse_matches(bufnr, nodes, pool, tree_num)
       table.insert(items, item)
 
     elseif type == CONSTANTS.SCOPE_LEFT then
+      -- need a clone of the finish as it gets modified
       local scope = recycle_from_pool(pool)
       for k, v in pairs(item) do
         scope[k] = v
       end
-      -- need a clone of the finish as it gets modified
+      scope._node = node
       scope.finish = {unpack(scope.finish)}
       scope.matched = true
       table.insert(scopes, scope)
@@ -334,39 +335,36 @@ local function process_on_bytes(state, args)
     end
   end
 
-  local function callback(items)
-    if not items then
-      return
+  local function callback(item)
+    -- on the last line, shift it horizontally
+    local start_col_shift = col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= finish[2]
+    local finish_col_shift = col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= finish[2]
+    -- if comes after the deleted range, shift it vertically
+    local start_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) >= 0
+    local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
+
+    if start_col_shift then
+      item.start[2] = item.start[2] + col_shift
+    end
+    if finish_col_shift then
+      item.finish[2] = item.finish[2] + col_shift
+    end
+    if start_line_shift then
+      item.start[1] = math.max(item.start[1] + line_shift, start_row)
+    end
+    if finish_line_shift then
+      item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
     end
 
-    for _, item in ipairs(items) do
-      -- on the last line, shift it horizontally
-      local start_col_shift = col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= finish[2]
-      local finish_col_shift = col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= finish[2]
-      -- if comes after the deleted range, shift it vertically
-      local start_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) >= 0
-      local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
-
-      if start_col_shift then
-        item.start[2] = item.start[2] + col_shift
-      end
-      if finish_col_shift then
-        item.finish[2] = item.finish[2] + col_shift
-      end
-      if start_line_shift then
-        item.start[1] = math.max(item.start[1] + line_shift, start_row)
-      end
-      if finish_line_shift then
-        item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
-      end
+    if item._node then
+      callback(item._node)
     end
   end
 
-  -- for _, nodes in pairs(state.nodes) do
-    -- callback(nodes)
-  -- end
   -- shift some
-  callback(state.items)
+  for _, item in ipairs(state.items) do
+    callback(item)
+  end
 
   -- also need to shift all other changes
   -- do i need this?
