@@ -3,7 +3,18 @@
 (interpolation) @scope.interpolation
 
 ; do not indent next line if inline block
-(_ (block _) @middle._block (#set! indent_next_at_most 0) (#set! no_highlight true))
+([
+  (if_statement (block _))
+  (else_clause (block _))
+  (while_statement (block _))
+  (with_statement (block _))
+  (for_statement (block _))
+  (class_definition (block _))
+  (function_definition (block _))
+  (try_statement (block _))
+  (except_clause (block _))
+  (case_clause (block _))
+] @middle._inline_block (#lua-match? @middle._inline_block "^[^\n]*$") (#set! indent_next_at_most -1) (#set! no_highlight true))
 ; do not indent in string
 (string . (string_start) @left.string (#set! indent_next -999) (#set! no_highlight true))
 (string (string_end) @right.string . (#set! indent_next -999) (#set! no_highlight true))
