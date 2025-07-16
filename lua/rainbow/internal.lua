@@ -328,14 +328,6 @@ local function process_on_bytes(state, args)
   local start = {start_row, start_col}
   local finish = {start_row + old_end_row, old_end_col}
 
-  for _, item in ipairs(state.items) do
-    -- if items fully in the changed range, register change
-    if tuple_cmp(item.start, start) >= 0 and tuple_cmp(item.finish, finish) <= 0 then
-      table.insert(state.changes, {start_row, start_row + end_row + 1})
-      break
-    end
-  end
-
   local function callback(item)
     -- on the last line, shift it horizontally
     local start_col_shift = col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= finish[2]
@@ -411,6 +403,15 @@ local function process_on_bytes(state, args)
     end
 
   end
+
+  for _, item in ipairs(state.items) do
+    -- if items fully in the changed range, register change
+    if tuple_cmp(item.start, start) >= 0 and tuple_cmp(item.finish, finish) <= 0 then
+      table.insert(state.changes, {start_row, start_row + end_row + 1})
+      break
+    end
+  end
+
 
 end
 
