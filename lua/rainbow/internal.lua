@@ -327,6 +327,7 @@ local function process_on_bytes(state, args)
   local col_shift = end_col - old_end_col
   local start = {start_row, start_col}
   local finish = {start_row + old_end_row, old_end_col}
+  local start_row_offset = 0
 
   local function callback(item)
     -- on the last line, shift it horizontally
@@ -334,7 +335,8 @@ local function process_on_bytes(state, args)
     local finish_col_shift = col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= finish[2]
     -- if comes after the deleted range, shift it vertically
     local start_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) >= 0
-    local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) >= 0
+    local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
+    local edge_finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) >= 0
 
     if start_col_shift then
       item.start[2] = item.start[2] + col_shift
@@ -347,6 +349,11 @@ local function process_on_bytes(state, args)
     end
     if finish_line_shift then
       item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
+    elseif edge_finish_line_shift then
+      -- this is just on the edge of the change
+      -- we don't know the gravity/if this will grow or not
+      -- so include the line for refresh
+      start_row_offset = -1
     end
 
     if item._node then
@@ -404,6 +411,7 @@ local function process_on_bytes(state, args)
 
   end
 
+  start_row = start_row + start_row_offset
   for _, item in ipairs(state.items) do
     -- if items fully in the changed range, register change
     if tuple_cmp(item.start, start) >= 0 and tuple_cmp(item.finish, finish) <= 0 then
