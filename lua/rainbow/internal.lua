@@ -411,11 +411,10 @@ local function process_on_bytes(state, args)
 
   end
 
-  start_row = start_row + start_row_offset
   for _, item in ipairs(state.items) do
     -- if items fully in the changed range, register change
     if tuple_cmp(item.start, start) >= 0 and tuple_cmp(item.finish, finish) <= 0 then
-      table.insert(state.changes, {start_row, start_row + end_row + 1})
+      table.insert(state.changes, {start_row + start_row_offset, start_row + end_row + 1})
       break
     end
   end
