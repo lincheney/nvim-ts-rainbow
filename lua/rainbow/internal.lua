@@ -330,13 +330,13 @@ local function process_on_bytes(state, args)
   local start_row_offset = 0
 
   local function callback(item)
-    -- on the last line, shift it horizontally
-    local start_col_shift = col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= finish[2]
-    local finish_col_shift = col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= finish[2]
     -- if comes after the deleted range, shift it vertically
     local start_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) >= 0
     local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
     local edge_finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) >= 0
+    -- on the last line, shift it horizontally
+    local start_col_shift = start_line_shift and col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= finish[2]
+    local finish_col_shift = finish_line_shift and col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= finish[2]
 
     if start_col_shift then
       item.start[2] = item.start[2] + col_shift
