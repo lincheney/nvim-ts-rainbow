@@ -296,7 +296,13 @@ local function get_nodes(bufnr, tree, lang, range, nodes, tree_num)
       local pos = #nodes + 1
       if start_row < range[1] then
         -- unless this does not start in the range, in which case find the correct index to insert at
-        pos = binsearch_items(nodes, {start_row, start_col})
+        while pos > 1 do
+          local cmp = tuple_cmp(nodes[pos-1].start, {start_row, start_col})
+          if cmp < 0 or (cmp == 0 and tuple_cmp(nodes[pos-1].finish, {end_row, end_col}) > 0) then
+            break
+          end
+          pos = pos - 1
+        end
       end
 
       table.insert(nodes, pos, {
