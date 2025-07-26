@@ -550,13 +550,17 @@ function M.update(bufnr, force)
     get_nodes(bufnr, tree, lang, invalidate_range, state.nodes, tree_num)
   end)
 
+  local num_parsed_trees = 0
   for k, v in pairs(state.nodes) do
-    local items = parse_matches(bufnr, v, pool, k)
-    vim.list_extend(state.items, items)
+    if #v > 0 then
+      local items = parse_matches(bufnr, v, pool, k)
+      vim.list_extend(state.items, items)
+      num_parsed_trees = num_parsed_trees + 1
+    end
   end
 
   -- don't need to sort if only 1 tree
-  if tree_num > 1 then
+  if num_parsed_trees > 1 then
     table.sort(state.items, function(x, y)
       local cmp = tuple_cmp(x.start, y.start)
       if cmp == 0 then
