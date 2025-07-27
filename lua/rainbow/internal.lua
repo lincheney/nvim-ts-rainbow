@@ -623,7 +623,7 @@ function M.attach(bufnr, lang, config)
       table.insert(state.queue, {'on_changedtree', changes})
     end,
     on_bytes = on_bytes,
-  })
+  }, true)
 
   vim.api.nvim_create_autocmd('BufReadPost', {buffer=bufnr, callback=function()
     if state_table[bufnr] == state then
