@@ -482,9 +482,9 @@ local function need_invalidate(bufnr)
     -- find the max range across items
     for _ = 1, 2 do
       for _, item in ipairs(state.items) do
-        if tuple_cmp(item.start, {range[2], 0}) < 0 and tuple_cmp(item.finish, {range[1], 0}) >= 0 then
+        if tuple_cmp(item.start, {range[2], 0}) < 0 and tuple_cmp(item.finish, {range[1], 0}) > 0 then
           range[1] = math.min(range[1], item.start[1])
-          range[2] = math.max(range[2], item.finish[1])
+          range[2] = math.max(range[2], item.finish[1]+1)
         end
       end
     end
