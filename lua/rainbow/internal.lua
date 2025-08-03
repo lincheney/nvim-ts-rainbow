@@ -260,14 +260,8 @@ local function get_nodes(bufnr, tree, lang, range, nodes, tree_num)
   local seen = {}
 
   local type_map = {left=CONSTANTS.LEFT, right=CONSTANTS.RIGHT, middle=CONSTANTS.MIDDLE, scope=CONSTANTS.SCOPE_LEFT}
-  nodes[tree_num] = nodes[tree_num] or {}
-  nodes = nodes[tree_num]
-
-  -- pop everything off on the right, add it back later
-  local right = {}
-  while #nodes > 0 and nodes[#nodes].start[1] >= range[1] do
-    table.insert(right, table.remove(nodes))
-  end
+  local old_nodes = nodes[tree_num]
+  local new_nodes = {}
 
   for id, node, metadata in query:iter_captures(root, bufnr, range[1], range[2]) do
     if node:missing() then
@@ -292,32 +286,50 @@ local function get_nodes(bufnr, tree, lang, range, nodes, tree_num)
         end
       end
 
-      -- insert at the end
-      local pos = #nodes + 1
-      if start_row < range[1] then
-        -- unless this does not start in the range, in which case find the correct index to insert at
-        while pos > 1 do
-          local cmp = tuple_cmp(nodes[pos-1].start, {start_row, start_col})
-          if cmp < 0 or (cmp == 0 and tuple_cmp(nodes[pos-1].finish, {end_row, end_col}) > 0) then
-            break
-          end
-          pos = pos - 1
-        end
-      end
-
-      table.insert(nodes, pos, {
+      table.insert(new_nodes, {
           type = type_map[name],
           kind = kind,
           metadata = metadata,
           start = {start_row, start_col},
           finish = {end_row, end_col},
+          node_id = node:id(),
       })
     end
   end
 
-  for i = #right, 1, -1 do
-    table.insert(nodes, right[i])
+  if #new_nodes == 0 then
+    return
   end
+  if not old_nodes or #old_nodes == 0 then
+    nodes[tree_num] = new_nodes
+    return
+  end
+
+  local merged = {}
+  local j = 1
+  for i, new in ipairs(new_nodes) do
+    while j <= #old_nodes do
+      local old = old_nodes[j]
+
+      if old.node_id == new.node_id then
+        -- remove duplicates
+        j = j + 1
+        break
+      end
+
+      local cmp = tuple_cmp(new.start, old.start)
+      if cmp < 0 or (cmp == 0 and tuple_cmp(new.finish, old.finish) > 0) then
+        -- new comes first
+        break
+      end
+
+      table.insert(merged, old)
+      j = j + 1
+    end
+    table.insert(merged, new)
+  end
+  vim.list_extend(merged, old_nodes, j)
+  nodes[tree_num] = merged
 end
 
 local function process_on_bytes(state, args)
