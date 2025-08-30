@@ -347,6 +347,14 @@ local function process_on_bytes(state, args)
   local start = {start_row, start_col}
   local finish = {start_row + old_end_row, old_end_col}
 
+  for _, item in ipairs(state.items) do
+    -- if items fully in the changed range, register change
+    if tuple_cmp(item.start, start) >= 0 and tuple_cmp(item.finish, finish) <= 0 then
+      table.insert(state.changes, {start_row, start_row + end_row + 1})
+      break
+    end
+  end
+
   local function callback(item)
     -- if comes after the deleted range, shift it vertically
     local start_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) >= 0
@@ -428,14 +436,6 @@ local function process_on_bytes(state, args)
 
     end
 
-  end
-
-  for _, item in ipairs(state.items) do
-    -- if items fully in the changed range, register change
-    if tuple_cmp(item.start, start) >= 0 and tuple_cmp(item.finish, finish) <= 0 then
-      table.insert(state.changes, {start_row, start_row + end_row + 1})
-      break
-    end
   end
 
 
