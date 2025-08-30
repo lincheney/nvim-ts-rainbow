@@ -311,7 +311,8 @@ local function get_nodes(bufnr, tree, lang, range, nodes, tree_num)
     while j <= #old_nodes do
       local old = old_nodes[j]
 
-      if old.node_id == new.node_id then
+      if tuple_cmp(old.start, new.start) == 0 and tuple_cmp(old.finish, new.finish) == 0 then
+      -- if old.node_id == new.node_id then
         -- remove duplicates
         j = j + 1
         break
