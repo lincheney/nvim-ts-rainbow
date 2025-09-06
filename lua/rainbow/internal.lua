@@ -371,10 +371,16 @@ local function process_on_bytes(state, args)
     end
 
     if start_col_shift then
-      item.start[2] = math.max(item.start[2] + col_shift, start_col)
+      item.start[2] = item.start[2] + col_shift
+      if line_shift == 0 then
+        item.start[2] = math.max(item.start[2], start_col)
+      end
     end
     if finish_col_shift then
-      item.finish[2] = math.max(item.finish[2] + col_shift, start_col)
+      item.finish[2] = item.finish[2] + col_shift
+      if line_shift == 0 then
+        item.finish[2] = math.max(item.finish[2], start_col)
+      end
     end
     if start_line_shift then
       item.start[1] = math.max(item.start[1] + line_shift, start_row)
