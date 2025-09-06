@@ -360,8 +360,8 @@ local function process_on_bytes(state, args)
     local start_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) >= 0
     local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
     -- on the last line, shift it horizontally
-    local start_col_shift = (line_shift == 0 or start_line_shift) and col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= finish[2]
-    local finish_col_shift = (line_shift == 0 or finish_line_shift) and col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= finish[2]
+    local start_col_shift = (line_shift == 0 or start_line_shift) and col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= start[2]
+    local finish_col_shift = (line_shift == 0 or finish_line_shift) and col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= start[2]
 
     if (line_shift > 0 or col_shift > 0) and (tuple_cmp(item.start, finish) == 0 or tuple_cmp(item.finish, start) == 0) then
       -- this is just on the edge of the change
@@ -371,10 +371,10 @@ local function process_on_bytes(state, args)
     end
 
     if start_col_shift then
-      item.start[2] = item.start[2] + col_shift
+      item.start[2] = math.max(item.start[2] + col_shift, start_col)
     end
     if finish_col_shift then
-      item.finish[2] = item.finish[2] + col_shift
+      item.finish[2] = math.max(item.finish[2] + col_shift, start_col)
     end
     if start_line_shift then
       item.start[1] = math.max(item.start[1] + line_shift, start_row)
