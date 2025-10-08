@@ -346,47 +346,42 @@ local function process_on_bytes(state, args)
   local col_shift = end_col - old_end_col
   local start = {start_row, start_col}
   local finish = {start_row + old_end_row, old_end_col}
+  local new_finish = {start_row + end_row, end_col}
 
-  for _, item in ipairs(state.items) do
-    -- if items fully in the changed range, register change
-    if tuple_cmp(item.start, start) >= 0 and tuple_cmp(item.finish, finish) <= 0 then
-      table.insert(state.changes, {start_row, start_row + end_row + 1})
-      break
-    end
-  end
-
+  local needs_change = false
   local function callback(item)
-    -- if comes after the deleted range, shift it vertically
-    local start_line_shift = line_shift ~= 0 and tuple_cmp(item.start, start) >= 0
-    local finish_line_shift = line_shift ~= 0 and tuple_cmp(item.finish, start) > 0
-    -- on the last line, shift it horizontally
-    local start_col_shift = (line_shift == 0 or start_line_shift) and col_shift ~= 0 and item.start[1] == finish[1] and item.start[2] >= start[2]
-    local finish_col_shift = (line_shift == 0 or finish_line_shift) and col_shift ~= 0 and item.finish[1] == finish[1] and item.finish[2] >= start[2]
+    if tuple_cmp(item.start, start) >= 0 then
 
-    if (line_shift > 0 or col_shift > 0) and (tuple_cmp(item.start, finish) == 0 or tuple_cmp(item.finish, start) == 0) then
-      -- this is just on the edge of the change
-      -- we don't know the gravity/if this will grow or not
-      -- so include the line for refresh
-        table.insert(state.changes, {item.start[1], item.finish[1] + 1})
-    end
+      -- if items is in changed range, register change
+      if tuple_cmp(item.finish, finish) <= 0 then
+        if not needs_change then
+          needs_change = true
+          table.insert(state.changes, {start_row, start_row + end_row + 1})
+        end
+        -- these don't matter?
+        item.start = {start[1], start[2]}
+        item.finish = {start[1], start[2]+1}
 
-    if start_col_shift then
-      item.start[2] = item.start[2] + col_shift
-      if line_shift == 0 then
-        item.start[2] = math.max(item.start[2], start_col)
+      else
+        local old_start_row = item.start[1]
+        local old_finish_row = item.finish[1]
+
+        if tuple_cmp(item.start, finish) >= 0 then
+          item.start[1] = item.start[1] + line_shift
+        elseif tuple_cmp(item.start, new_finish) >= 0 then
+          item.start = {new_finish[1], new_finish[2]}
+        end
+        item.finish[1] = item.finish[1] + line_shift
+
+        -- shift columns
+        if old_start_row == finish[1] then
+          item.start[2] = item.start[2] + col_shift
+        end
+        if old_finish_row == finish[1] then
+          item.finish[2] = item.finish[2] + col_shift
+        end
       end
-    end
-    if finish_col_shift then
-      item.finish[2] = item.finish[2] + col_shift
-      if line_shift == 0 then
-        item.finish[2] = math.max(item.finish[2], start_col)
-      end
-    end
-    if start_line_shift then
-      item.start[1] = math.max(item.start[1] + line_shift, start_row)
-    end
-    if finish_line_shift then
-      item.finish[1] = math.max(item.finish[1] + line_shift, start_row)
+
     end
 
     if item._node then
@@ -677,10 +672,14 @@ local function on_line(_, win, bufnr, row)
 
   local lang = state_table[bufnr].lang
   local items = state_table[bufnr].items
-  local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
-  for i = start, finish do
+  -- local start, finish = get_items_in_range(items, {row-1, math.huge}, {row, math.huge})
+  for i = 1, #items do
     local item = items[i]
-    if (item.type ~= CONSTANTS.MIDDLE or (item.level and config.highlight_middle)) and not (item.metadata and item.metadata.no_highlight) then
+    if item.start[1] <= row
+      and item.finish[1] >= row
+      and (item.type ~= CONSTANTS.MIDDLE or (item.level and config.highlight_middle))
+      and not (item.metadata and item.metadata.no_highlight)
+    then
 
       if not item.hl then
         item.hl = config.unmatched_color
