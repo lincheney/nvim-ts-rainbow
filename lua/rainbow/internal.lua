@@ -383,15 +383,19 @@ local function process_on_bytes(state, args)
       end
 
     end
-
-    if item._node then
-      callback(item._node)
-    end
   end
 
   -- shift some
   for _, item in ipairs(state.items) do
-    callback(item)
+    if item._node then
+      callback(item)
+    end
+  end
+  -- also shift any nodes that do not have highlights
+  for _, nodes in pairs(state.nodes) do
+    for _, item in ipairs(nodes) do
+      callback(item)
+    end
   end
 
   -- also need to shift all other changes
